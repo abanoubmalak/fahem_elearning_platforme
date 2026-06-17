@@ -1,36 +1,34 @@
-import 'package:fahem/features/forgot_password/presentation/screens/forgot_password_screen.dart';
-import 'package:fahem/features/login/presentation/screens/login.dart';
-import 'package:fahem/features/sign_up/presentation/screens/sign_up.dart';
-import 'package:fahem/features/splash/presentation/screens/splash_screen.dart';
+import 'package:fahem/core/routing/app_router.dart';
+import 'package:fahem/core/routing/routes.dart';
+import 'package:fahem/firebase_options.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-void main(){
+void main() async{
   WidgetsFlutterBinding.ensureInitialized();
-  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );  SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
 
-  runApp(MyApp());
+  runApp(MyApp(appRouter: AppRouter(),));
 }
 
-class MyApp extends StatefulWidget{
-  const MyApp({super.key});
-
-  @override
-  State<MyApp> createState()=>_MyAppState();
-}
-
-class _MyAppState extends State<MyApp>{
+class MyApp extends StatelessWidget{
+  final AppRouter appRouter;
+  const MyApp({super.key, required this.appRouter});
 
   @override
   Widget build(BuildContext context){
     return MaterialApp(
+      initialRoute: Routes.splashScreen,
+      onGenerateRoute: appRouter.generateRoute,
       debugShowCheckedModeBanner: false,
-      home:SplashScreen()
+      
       
     );
   }
 }
-
 
 // lib/
 // ├── main.dart            # نقطة البداية وإعدادات التطبيق

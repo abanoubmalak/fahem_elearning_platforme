@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "208558540468",
+    "project_id": "fahem-8c8ad",
+    "storage_bucket": "fahem-8c8ad.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:208558540468:android:9d0d44e9211aefb181b9e1",
+        "android_client_info": {
+          "package_name": "com.example.fahem"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBnuYJZfHaXbPal_HyKuFd6dpw8kAVkVg8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

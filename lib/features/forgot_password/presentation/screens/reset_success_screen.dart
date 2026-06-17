@@ -1,4 +1,5 @@
-import 'package:fahem/features/login/presentation/screens/login.dart';
+import 'package:fahem/core/routing/routes.dart';
+import 'package:fahem/features/auth/presentation/screens/login.dart';
 import 'package:flutter/material.dart';
 
 class ResetSuccessScreen extends StatelessWidget {
@@ -73,9 +74,7 @@ class ResetSuccessScreen extends StatelessWidget {
                     height: 55,
                     child: ElevatedButton(
                       onPressed: () {
-                        Navigator.push(context,
-                        MaterialPageRoute(builder: (context)=> const LoginScreen())
-                        );
+                        Navigator.pushNamed(context, Routes.loginScreen);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF269A9E),

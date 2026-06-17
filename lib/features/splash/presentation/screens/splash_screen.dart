@@ -1,7 +1,8 @@
 import 'dart:async';
 
 import 'package:fahem/core/constants/colors.dart';
-import 'package:fahem/features/login/presentation/screens/login.dart';
+import 'package:fahem/core/routing/routes.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -9,22 +10,26 @@ class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState()=> _SplashScreen();
+  State<SplashScreen> createState() => _SplashScreen();
 }
 
-class _SplashScreen extends State<SplashScreen>with SingleTickerProviderStateMixin{
-late AnimationController _animationController;
-late Animation<double> _fadeAnimation;
+class _SplashScreen extends State<SplashScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
 
     // 1. Setup Status Bar (Make it transparent for full screen feel)
-    SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark, // Dark icons for light background
-    ));
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness:
+            Brightness.dark, // Dark icons for light background
+      ),
+    );
 
     // 2. Setup Animations
     _animationController = AnimationController(
@@ -41,35 +46,8 @@ late Animation<double> _fadeAnimation;
 
     // 3. Setup Timer for Navigation
     Timer(const Duration(seconds: 4), () {
-      // Navigate to the next screen (e.g., Role Selection)
-      // Use pushReplacement so user can't go back to splash
-      
-      // Navigator.of(context).pushReplacement(
-      //   MaterialPageRoute(builder: (_) => const LoginScreen()),
-      // );
-
-      Navigator.push(
-  context,
-  PageRouteBuilder(
-    pageBuilder: (context, animation, secondaryAnimation) => LoginScreen(),
-    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-      const begin = Offset(1.0, 0.0); // من اليمين
-      const end = Offset.zero;
-
-      final tween = Tween(begin: begin, end: end);
-      final offsetAnimation = animation.drive(tween);
-
-      return SlideTransition(
-        position: offsetAnimation,
-        child: child,
-      );
-    },
-  ),
-);
-      
-      
-      // For now, just print a message since we don't have the next screen
-      debugPrint("Navigate to Role Selection Screen");
+      // الانتقال باستخدام الاسم ليمر عبر الموجه الرئيسي بأمان ويحذف الـ Splash
+      Navigator.pushReplacementNamed(context, Routes.loginScreen);
     });
   }
 
@@ -79,11 +57,10 @@ late Animation<double> _fadeAnimation;
     super.dispose();
   }
 
-
   @override
-  Widget build(BuildContext context){
+  Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor:Colors.white,
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
           child: FadeTransition(
@@ -91,37 +68,39 @@ late Animation<double> _fadeAnimation;
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: 60,),
+                SizedBox(height: 60),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(1),
-                  child: Image.asset("assets/images/logo.png",
+                  child: Image.asset(
+                    "assets/images/logo.png",
                     width: 175,
-                    height: 175 ,
-                    
+                    height: 175,
                   ),
                 ),
-                const SizedBox(height: 25,),
-                const Text("FAHEM",
+                const SizedBox(height: 25),
+                const Text(
+                  "FAHEM",
                   style: TextStyle(
                     height: 0.8,
                     letterSpacing: 2,
                     fontSize: 65,
                     fontWeight: FontWeight.w900,
                     fontFamily: "Montserrat",
-                    color:AppColors.primaryColor,
+                    color: AppColors.primaryColor,
                   ),
                 ),
-                const SizedBox(height: 15,),
-                const Text("فاهم",
+                const SizedBox(height: 15),
+                const Text(
+                  "فاهم",
                   style: TextStyle(
                     height: 0.8,
                     fontSize: 105,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
-                    fontFamily: "Cairo"
+                    fontFamily: "Cairo",
                   ),
                 ),
-                const SizedBox(height: 40,),
+                const SizedBox(height: 40),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 40),
                   child: const Text(
@@ -130,48 +109,44 @@ late Animation<double> _fadeAnimation;
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.darkGreyColor   ,
+                      color: AppColors.darkGreyColor,
                       fontFamily: 'Cairo',
                       fontStyle: FontStyle.italic,
                     ),
                   ),
                 ),
-                const SizedBox(height: 60,),
+                const SizedBox(height: 60),
                 Center(
-                  child: 
-                  Column(
+                  child: Column(
                     children: [
                       const SizedBox(
                         width: 40,
                         height: 40,
                         child: CircularProgressIndicator(
                           strokeWidth: 6,
-                          valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryColor),
-                          )
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            AppColors.primaryColor,
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 15),
-                          Text(
-                            "...جاري التحميل",
-                            style: TextStyle(
-                              fontFamily: 'Cairo',
-                              color: AppColors.primaryColor.withAlpha(204),
-                              fontSize: 20,
-                              fontWeight: FontWeight.w800
-                            ),
-                          ),
-                          
+                      Text(
+                        "...جاري التحميل",
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          color: AppColors.primaryColor.withAlpha(204),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
                     ],
                   ),
-                )
-                
-                
-            
+                ),
               ],
             ),
           ),
         ),
-      )
+      ),
     );
   }
-
 }
