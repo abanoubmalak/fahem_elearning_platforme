@@ -1,6 +1,6 @@
 // lib/features/teachers/presentation/screens/chat_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
-import 'package:fahem/core/routing/routes.dart';
 import 'package:flutter/material.dart';
 
 class ChatScreen extends StatefulWidget {
@@ -20,36 +20,42 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  
+  // معرف ثابت وموحد للغرفة (مثال مبسط لمشروع التخرج يربط الطالب الحالي بالمعلم)
+  // في التطبيق الفعلي يفضل استخدام الـ uid الخاص بالطالب
+  final String _studentId = "abanoub_student"; 
+  late String _chatRoomId;
 
-  // قائمة رسائل افتراضية حيوية لإثبات الكفاءة أمام لجنة المناقشة
-  final List<Map<String, dynamic>> _messages = [
-    {
-      'text': 'مرحباً يا بطل، بالطبع تفضل باختيار السؤال وسأجيبك فوراً.',
-      'isMe': false, // مرسلة من المدرس
-      'time': '10:05 ص',
-    },
-    {
-      'text': 'أهلاً بحضرتك يا فندم، كان عندي سؤال في الدرس الأول بخصوص المجموعة الصفرية.',
-      'isMe': true, // مرسلة من الطالب (أبانوب)
-      'time': '10:06 ص',
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // إنشاء معرف فريد لغرفة المحادثة يجمع المعلم والطالب معاً منعاً لتداخل المحادثات
+    _chatRoomId = "${_studentId}_${widget.teacherName.replaceAll(' ', '_')}";
+  }
 
-  void _sendMessage() {
+  // دالة إرسال الرسالة وحفظها في الفايربيز حياً
+  void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
-    setState(() {
-      _messages.add({
-        'text': _messageController.text.trim(),
-        'isMe': true,
-        'time': 'الآن',
-      });
+    final messageText = _messageController.text.trim();
+    _messageController.clear();
+
+    // إضافة الرسالة في كوليكشن فرعي داخل غرفة المحادثة
+    await FirebaseFirestore.instance
+        .collection('chats')
+        .doc(_chatRoomId)
+        .collection('messages')
+        .add({
+      'text': messageText,
+      'isMe': true, // الطالب هو الراسل في تطبيقه الحالي
+      'timestamp': FieldValue.serverTimestamp(), // اعتماد وقت السيرفر لترتيب الرسائل بدقة
     });
 
-    _messageController.clear();
-    
-    // سكرول تلقائي لأسفل المحادثة فور إرسال رسالة جديدة
-    Future.delayed(const Duration(milliseconds: 100), () {
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 200), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
@@ -71,21 +77,18 @@ class _ChatScreenState extends State<ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      // ==================== 1. شريط علوي ذكي يحمل بيانات المعلم وحالته ====================
+      // ==================== 1. شريط علوي يحمل بيانات المعلم وحالته ====================
       appBar: AppBar(
-        backgroundColor: const Color(0xFF005F61), // اللون الفيروزي الموحد للهوية
+        backgroundColor: const Color(0xFF005F61),
         elevation: 0,
-        automaticallyImplyLeading: false, // إلغاء السهم الافتراضي لتخصيصه عربيًا
+        automaticallyImplyLeading: false, 
         title: Directionality(
           textDirection: TextDirection.rtl,
           child: Row(
             children: [
               IconButton(
                 icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                onPressed: () {
-                  // العودة للشاشة السابقة (MainWrapper) والحفاظ على البار السفلي نشطاً
-                  Navigator.pop(context);
-                },
+                onPressed: () => Navigator.pop(context),
               ),
               const CircleAvatar(
                 radius: 18,
@@ -116,19 +119,53 @@ class _ChatScreenState extends State<ChatScreen> {
         textDirection: TextDirection.rtl,
         child: Column(
           children: [
-            // ==================== 2. منطقة عرض الرسائل القابلة للتمرير ====================
+            // ==================== 2. منطقة عرض الرسائل الحية من الفايربيز ====================
             Expanded(
-              child: ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(16),
-                physics: const BouncingScrollPhysics(),
-                itemCount: _messages.length,
-                itemBuilder: (context, index) {
-                  final message = _messages[index];
-                  return _buildMessageBubble(
-                    text: message['text'],
-                    isMe: message['isMe'],
-                    time: message['time'],
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('chats')
+                    .doc(_chatRoomId)
+                    .collection('messages')
+                    .orderBy('timestamp', descending: false) // ترتيب تصاعدي لعرض المحادثة منطقياً
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
+                  }
+                  if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return Center(
+                      child: Text(
+                        'ابدأ المحادثة الآن مع معلمك المتميز! 💬',
+                        style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey[500]),
+                      ),
+                    );
+                  }
+
+                  final messageDocs = snapshot.data!.docs;
+                  
+                  // عمل سكرول تلقائي لآخر المحادثة فور وصول بيانات جديدة
+                  WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
+
+                  return ListView.builder(
+                    controller: _scrollController,
+                    padding: const EdgeInsets.all(16),
+                    physics: const BouncingScrollPhysics(),
+                    itemCount: messageDocs.length,
+                    itemBuilder: (context, index) {
+                      final docData = messageDocs[index].data() as Map<String, dynamic>;
+                      
+                      // معالجة الوقت والتاريخ لتجنب مشاكل الـ Null قبل وصول الـ Timestamp من السيرفر
+                      final Timestamp? timestamp = docData['timestamp'] as Timestamp?;
+                      final String timeString = timestamp != null 
+                          ? "${timestamp.toDate().hour}:${timestamp.toDate().minute.toString().padLeft(2, '0')}" 
+                          : "الآن";
+
+                      return _buildMessageBubble(
+                        text: docData['text'] ?? '',
+                        isMe: docData['isMe'] ?? true,
+                        time: timeString,
+                      );
+                    },
                   );
                 },
               ),
@@ -140,16 +177,11 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha((0.03 * 255).toInt()),
-                    blurRadius: 10,
-                    offset: const Offset(0, -4),
-                  ),
+                  BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, -4)),
                 ],
               ),
               child: Row(
                 children: [
-                  // صندوق الإدخال النصي
                   Expanded(
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14),
@@ -172,6 +204,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
+                              onSubmitted: (_) => _sendMessage(), // إمكانية الإرسال عبر زر الكيبورد
                             ),
                           ),
                           const Icon(Icons.attach_file_rounded, color: Colors.grey, size: 20),
@@ -181,7 +214,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   ),
                   const SizedBox(width: 10),
                   
-                  // زر الإرسال الدائري المعتمد تكنولوجياً باللون الذهبي المميز للتفاعل
                   GestureDetector(
                     onTap: _sendMessage,
                     child: const CircleAvatar(
@@ -199,7 +231,6 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  // ويدجت هندسة كبسولة الرسالة (Message Bubble) ومحمية بالكامل من الـ Overflow
   Widget _buildMessageBubble({required String text, required bool isMe, required String time}) {
     return Align(
       alignment: isMe ? Alignment.centerLeft : Alignment.centerRight,
@@ -208,7 +239,7 @@ class _ChatScreenState extends State<ChatScreen> {
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isMe ? const Color(0xFF005F61) : const Color(0xFFF1F5F9), // الفيروزي للطالب، والرمادي الفاتح للمدرس
+          color: isMe ? const Color(0xFF005F61) : const Color(0xFFF1F5F9), 
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
@@ -221,21 +252,12 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Text(
               text,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 13.5,
-                color: isMe ? Colors.white : AppColors.textMain,
-                height: 1.4,
-              ),
+              style: TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: isMe ? Colors.white : AppColors.textMain, height: 1.4),
             ),
             const SizedBox(height: 4),
             Text(
               time,
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                fontSize: 9,
-                color: isMe ? Colors.white70 : Colors.grey[500],
-              ),
+              style: TextStyle(fontFamily: 'Cairo', fontSize: 9, color: isMe ? Colors.white70 : Colors.grey[500]),
             ),
           ],
         ),

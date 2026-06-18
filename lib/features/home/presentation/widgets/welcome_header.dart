@@ -1,7 +1,10 @@
 // lib/features/home/widgets/home_header.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
+import 'package:fahem/features/home/presentation/cubit/student_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomeHeader extends StatelessWidget {
   final String userName;
@@ -25,7 +28,11 @@ class HomeHeader extends StatelessWidget {
               child: IconButton(
                 icon: const Icon(Icons.person, color: AppColors.darkGreyColor,),
                 onPressed: (){
-                  Navigator.pushNamed(context, Routes.ProfileScreen);
+                  Navigator.pushNamed(
+                    context, 
+                    Routes.ProfileScreen, 
+                    arguments: context.read<StudentCubit>(), // إرسال الكوبيت الحالي عبر الراوتر
+                  );
                 }
                 
               ),

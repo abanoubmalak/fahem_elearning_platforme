@@ -50,29 +50,36 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
     },
   ];
 
-  void _startChatWithTeacher(String teacherName) {
+  // 👈 التعديل هنا: تمرير بيانات المدرس بالكامل للراوتر
+  void _startChatWithTeacher(Map<String, dynamic> teacher) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('جاري فتح غرفة المحادثة الآمنة مع $teacherName...', style: const TextStyle(fontFamily: 'Cairo')),
-        backgroundColor: const Color(0xFF005F61), // تم تعديله للون الفيروزي الأساسي
+        content: Text('جاري فتح غرفة المحادثة الآمنة مع ${teacher['name']}...', style: const TextStyle(fontFamily: 'Cairo')),
+        backgroundColor: const Color(0xFF005F61),
       ),
     );
 
-  Navigator.pushNamed(context, Routes.ChatScreen);
+    Navigator.pushNamed(
+      context, 
+      Routes.ChatScreen, // تأكد إن الاسم يبدأ بحرف صغير ليطابق مساراتك
+      arguments: {
+        'teacherName': teacher['name'],
+        'subject': teacher['subject'],
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl, // توجيه المحتوى من اليمين لليسار
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        // ==================== 1. الترويسة العلوية باستخدام AppBar ====================
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          toolbarHeight: 100, // مساحة مريحة لاستيعاب العنوان والوصف
-          automaticallyImplyLeading: false, // لعدم ظهور زر الرجوع إذا كانت في الـ Bottom Nav Bar
+          toolbarHeight: 100,
+          automaticallyImplyLeading: false,
           flexibleSpace: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
@@ -99,12 +106,9 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
             ],
           ),
         ),
-
-        // ==================== 2. قائمة المدرسين (بدون Stack لتفادي التداخل) ====================
         body: ListView.builder(
           physics: const BouncingScrollPhysics(),
           itemCount: _teachers.length,
-          // بادينج من جميع الاتجاهات مع مسافة سفلية 110 لحماية الكروت من شريط التنقل
           padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0).copyWith(bottom: 110),
           itemBuilder: (context, index) {
             final teacher = _teachers[index];
@@ -115,7 +119,6 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
     );
   }
 
-  // ويدجت بناء كارت المدرس التفاعلي
   Widget _buildTeacherCard(Map<String, dynamic> teacher) {
     final bool isOnline = teacher['isOnline'];
 
@@ -136,7 +139,6 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
       ),
       child: Row(
         children: [
-          // أ) الصورة الرمزية للمدرس
           Stack(
             children: [
               CircleAvatar(
@@ -159,10 +161,7 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
               ),
             ],
           ),
-          
           const SizedBox(width: 16),
-
-          // ب) تفاصيل المدرس (محمية بـ Expanded لمنع Overflow)
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -188,19 +187,16 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
               ],
             ),
           ),
-
           const SizedBox(width: 10),
-
-          // ج) زر المحادثة
           ElevatedButton.icon(
-            onPressed: () => _startChatWithTeacher(teacher['name']),
+            onPressed: () => _startChatWithTeacher(teacher), // 👈 إرسال الكائن بالكامل
             icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.white),
             label: const Text(
               'مراسلة',
               style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
             ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE6A100), // اللون الذهبي
+              backgroundColor: const Color(0xFFE6A100),
               elevation: 0,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),

@@ -16,6 +16,7 @@ import 'package:fahem/features/courses/presentation/screens/courses.dart';
 import 'package:fahem/features/forgot_password/presentation/screens/forgot_password_screen.dart';
 import 'package:fahem/features/forgot_password/presentation/screens/reset_password_screen.dart';
 import 'package:fahem/features/forgot_password/presentation/screens/verification_screen.dart';
+import 'package:fahem/features/home/presentation/cubit/student_cubit.dart';
 import 'package:fahem/features/home/presentation/screens/home.dart';
 import 'package:fahem/features/home/presentation/screens/main_wrapper.dart';
 import 'package:fahem/features/lessons/presentation/screens/lessom_summery_screen.dart';
@@ -143,45 +144,124 @@ Map<String, dynamic> sampleStudentData = {
             builder: (_)=> Courses()
           );
 
-          case Routes.SubjectDetailsScreen:
+
+
+
+
+
+  case Routes.SubjectDetailsScreen:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => SubjectDetailsScreen(
+            subjectId: args['subjectId'] as String,
+            subjectTitle: args['subjectTitle'] as String,
+            studentTerm: args['studentTerm'] as String,
+          ),
+        );
+
+          // case Routes.MainWrapper:
+          // return MaterialPageRoute(
+          //   builder: (_)=> MainWrapper()
+          // );
+
+                  case Routes.MainWrapper:
           return MaterialPageRoute(
-            builder: (_)=> SubjectDetailsScreen()
+            builder: (_) => BlocProvider(
+              create: (context) => StudentCubit()..loadStudentDashboard(),
+              child: const MainWrapper(),
+            ),
           );
 
-          case Routes.MainWrapper:
-          return MaterialPageRoute(
-            builder: (_)=> MainWrapper()
-          );
+          // case Routes.VideoPlayerScreen:
+          // return MaterialPageRoute(
+          //   builder: (_)=> VideoPlayerScreen(lessonTitle: "Lesson 1")
+          // );
 
-          case Routes.VideoPlayerScreen:
-          return MaterialPageRoute(
-            builder: (_)=> VideoPlayerScreen(lessonTitle: "Lesson 1")
-          );
+// ==================== 2. مسار شاشة مشغل الفيديو ====================
+      case Routes.VideoPlayerScreen:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => VideoPlayerScreen(
+            lessonTitle: args['lessonTitle'] as String,
+            videoUrl: args['videoUrl'] as String,
+            questions: args['questions'] as List<dynamic>,
+            subjectId: args['subjectId'] as String,
+            studentTerm: args['studentTerm'] as String,
+          ),
+        );
 
-          case Routes.LessonSummaryScreen:
-          return MaterialPageRoute(
-            builder: (_)=> LessonSummaryScreen(lessonTitle: "Lesson 1")
-          );
+          // case Routes.LessonSummaryScreen:
+          // return MaterialPageRoute(
+          //   builder: (_)=> LessonSummaryScreen(lessonTitle: "Lesson 1")
+          // );
 
-          case Routes.QuizScreen:
-          return MaterialPageRoute(
-            builder: (_)=> QuizScreen(lessonTitle: "Lesson 1")
-          );
 
-          case Routes.ProfileScreen:
-          return MaterialPageRoute(
-            builder: (_)=> ProfileScreen()
-          );
+        //   case Routes.LessonSummaryScreen:
+        // final args = settings.arguments as Map<String, dynamic>;
+        // return MaterialPageRoute(
+        //   builder: (_) => LessonSummaryScreen(
+        //     lessonTitle: args['lessonTitle'] as String,
+        //     // يمكنك تمرير الملخصات هنا أيضاً لو أضفت حقل summary في الفايرستور
+        //   ),
+        // );
+
+
+
+
+        case Routes.LessonSummaryScreen:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => LessonSummaryScreen(
+            lessonTitle: args['lessonTitle'] as String,
+            summaries: args['summaries'] as List<dynamic>,
+          ),
+        );
+
+          // case Routes.QuizScreen:
+          // return MaterialPageRoute(
+          //   builder: (_)=> QuizScreen(lessonTitle: "Lesson 1")
+          // );
+
+         case Routes.QuizScreen:
+        final args = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => QuizScreen(
+            lessonTitle: args['lessonTitle'] as String,
+            questions: args['questions'] as List<dynamic>,
+            subjectId: args['subjectId'] as String,
+            studentTerm: args['studentTerm'] as String,
+          ),
+        );
+
+          // case Routes.ProfileScreen:
+          // return MaterialPageRoute(
+          //   builder: (_)=> ProfileScreen()
+          // );
+
+          case Routes.ProfileScreen: // تأكد من مطابقة الاسم لكلاس الـ Routes عندك
+        // سحب نسخة الكوبيت الممررة في أمر الانتقال 🛰️
+        final studentCubit = settings.arguments as StudentCubit;
+        
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: studentCubit, // تمرير نفس العقل النشط لشاشة التعديل 👈
+            child: const ProfileScreen(),
+          ),
+        );
 
           case Routes.ContactTeachersScreen:
           return MaterialPageRoute(
             builder: (_)=> ContactTeachersScreen()
           );
 
-          case Routes.ChatScreen:
-          return MaterialPageRoute(
-            builder: (_)=> ChatScreen(teacherName: "أبانوب ملاك",subject: "العلوم",)
-          );
+         case Routes.ChatScreen: // 👈 تأكد من تطابق الاسم مع routes.dart
+  final args = settings.arguments as Map<String, dynamic>;
+  return MaterialPageRoute(
+    builder: (_) => ChatScreen(
+      teacherName: args['teacherName'] as String,
+      subject: args['subject'] as String,
+    ),
+  );
 
           case Routes.PerformanceScreen:
           return MaterialPageRoute(

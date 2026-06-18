@@ -1,8 +1,9 @@
+// lib/features/splash/presentation/screens/splash_screen.dart
 import 'dart:async';
-
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
-
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 استيراد مصادقة فايربيز
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد قاعدة البيانات للفحص الذكي
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -26,8 +27,7 @@ class _SplashScreen extends State<SplashScreen>
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness:
-            Brightness.dark, // Dark icons for light background
+        statusBarIconBrightness: Brightness.dark, // Dark icons for light background
       ),
     );
 
@@ -44,10 +44,40 @@ class _SplashScreen extends State<SplashScreen>
     // Start animation
     _animationController.forward();
 
-    // 3. Setup Timer for Navigation
-    Timer(const Duration(seconds: 4), () {
-      // الانتقال باستخدام الاسم ليمر عبر الموجه الرئيسي بأمان ويحذف الـ Splash
-      Navigator.pushReplacementNamed(context, Routes.loginScreen);
+    // 3. نظام الفحص الذكي وحفظ الجلسة والتوجيه المعتمد على الأدوار 👈
+    Timer(const Duration(seconds: 4), () async {
+      final user = FirebaseAuth.instance.currentUser;
+
+      if (user != null) {
+        try {
+          // جلب مستند المستخدم لمعرفة الـ role الفعلي المخزن بالـ Firestore
+          final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+          
+          if (doc.exists && doc.data() != null) {
+            String role = doc.get('role') ?? 'student';
+            
+            // التوجيه الحركي الصارم حسب صلاحيات الحساب الموثق
+            if (role == 'admin') {
+              Navigator.pushReplacementNamed(context, Routes.AdminMainWrapper);
+            } else if (role == 'teacher') {
+              Navigator.pushReplacementNamed(context, Routes.TeacherMainWrapper);
+            } else if (role == 'parent') {
+              Navigator.pushReplacementNamed(context, Routes.ParentWrapper);
+            } else {
+              Navigator.pushReplacementNamed(context, Routes.MainWrapper); // الطالب الافتراضي
+            }
+          } else {
+            // إذا لم يوجد المستند يتم التصفير للشاشة الافتراضية للسلامة الأمنية
+            Navigator.pushReplacementNamed(context, Routes.loginScreen);
+          }
+        } catch (e) {
+          // في حال حدوث انقطاع بالشبكة يتم التوجيه لصفحة الدخول كحماية احتياطية
+          Navigator.pushReplacementNamed(context, Routes.loginScreen);
+        }
+      } else {
+        // إذا لم يسجل دخوله مسبقاً، يفتح شاشة الدخول المعتادة
+        Navigator.pushReplacementNamed(context, Routes.loginScreen);
+      }
     });
   }
 
@@ -63,12 +93,13 @@ class _SplashScreen extends State<SplashScreen>
       backgroundColor: Colors.white,
       body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
           child: FadeTransition(
             opacity: _fadeAnimation,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                SizedBox(height: 60),
+                const SizedBox(height: 60),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(1),
                   child: Image.asset(

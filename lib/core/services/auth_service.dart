@@ -83,31 +83,28 @@ class AuthService {
 
   // 👈 تعديل دالة تسجيل الدخول لتفهم وتطابق كلمة المرور الجديدة المحدثة سحابياً
   Future<String?> loginUser({required String email, required String password}) async {
-    String cleanEmail = email.trim().toLowerCase();
-    String cleanPassword = password.trim();
+    try {
+      // 1. الاتصال الرسمي بـ FirebaseAuth لتوليد الجلسة وحفظ الـ Token على الجهاز 👈
+      UserCredential userCredential = await _auth.signInWithEmailAndPassword(
+        email: email.trim(),
+        password: password,
+      );
 
-    // 1. الفحص الاستباقي في الفايرستور لمعاينة إذا تم تغيير الباسورد عبر شاشاتك المخصصة
-    final query = await _firestore.collection('users').where('email', isEqualTo: cleanEmail).get();
-    
-    if (query.docs.isNotEmpty) {
-      var userData = query.docs.first.data();
-      // لو الباسورد المكتوب يطابق الباسورد الجديد المخزن في الفايرستور
-      if (userData['password'] == cleanPassword) {
-        return userData['role'] as String?;
+      // 2. إذا نجح الدخول، نجلب الـ Role من الفايرستور
+      if (userCredential.user != null) {
+        DocumentSnapshot userDoc = await _firestore.collection('users').doc(userCredential.user!.uid).get();
+        
+        if (userDoc.exists && userDoc.data() != null) {
+          return userDoc.get('role') ?? 'student'; // إرجاع الصلاحية لتوجيه المستخدم
+        }
       }
+      return 'student'; // صلاحية افتراضية أمان
+      
+    } catch (e) {
+      // تمرير الخطأ للـ AuthCubit لترجمته وعرضه
+      rethrow; 
     }
-
-    // 2. المحاولة الافتراضية عبر خادم الفايربيز الأساسي
-    UserCredential credential = await _auth.signInWithEmailAndPassword(email: cleanEmail, password: cleanPassword);
-    if (credential.user != null) {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(credential.user!.uid).get();
-      if (doc.exists && doc.data() != null) {
-        return doc.get('role') as String?; 
-      }
-    }
-    return null;
   }
-
   // مراجعة رمز الـ OTP
   Future<bool> verifyUserOTP(String uid, String enteredCode) async {
     try {
