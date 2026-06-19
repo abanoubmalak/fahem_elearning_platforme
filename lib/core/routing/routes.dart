@@ -54,7 +54,9 @@ class Routes {
 
   
 
-
+  static const String AdminParentsManagementScreen = '/admin-parents-management';
+  static const String ParentDetailsScreen = '/parent-details';
+  static const String EditParentScreen = '/edit-parent';
 
   
 }

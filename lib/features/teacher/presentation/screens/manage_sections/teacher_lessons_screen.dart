@@ -1,87 +1,70 @@
 // lib/features/teacher/presentation/screens/manage_sections/teacher_lessons_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
+import 'package:fahem/features/teacher/presentation/cubit/teacher_academic_cubit.dart';
 import 'package:flutter/material.dart';
-import 'lesson_content_hub_screen.dart'; // استيراد الشاشة المجمعة والمركزية الجديدة
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'lesson_content_hub_screen.dart'; 
 
 class TeacherLessonsScreen extends StatefulWidget {
   final String unitName;
   final String stageName;
-  const TeacherLessonsScreen({super.key, required this.unitName, required this.stageName});
+  final String subjectId; 
+  final String term;      
+
+  const TeacherLessonsScreen({
+    super.key, 
+    required this.unitName, 
+    required this.stageName,
+    required this.subjectId,
+    required this.term,
+  });
 
   @override
   State<TeacherLessonsScreen> createState() => _TeacherLessonsScreenState();
 }
 
 class _TeacherLessonsScreenState extends State<TeacherLessonsScreen> {
-  // قائمة الدروس التجريبية داخل الوحدة المحددة (قابلة للتعديل والمزامنة الحية)
-  final List<String> _lessons = [
-    'الدرس الأول: التعبير الرمزي عن الدالة',
-    'الدرس الثاني: دوال كثيرات الحدود',
-    'الدرس الثالث: دراسة بعض الدوال الخاصة',
-  ];
 
-  // دالة إضافة درس جديد ديناميكياً وحركياً لحساب حالة الواجهة
-  void _openAddLessonBottomSheet() {
+  void _openAddLessonBottomSheet(List<dynamic> currentUnits) {
     final TextEditingController lessonController = TextEditingController();
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30)),
-      ),
-      builder: (context) => Directionality(
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30))),
+      builder: (sheetContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 25, 20, MediaQuery.of(context).viewInsets.bottom + 30),
+          padding: EdgeInsets.fromLTRB(20, 25, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 25),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'إضافة درس جديد للوحدة',
-                style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain),
-              ),
-              const SizedBox(height: 15),
+              const Text('إضافة درس جديد للوحدة', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
+              const SizedBox(height: 18),
               TextField(
                 controller: lessonController,
-                style: const TextStyle(fontFamily: 'Cairo', fontSize: 14),
-                decoration: InputDecoration(
-                  labelText: 'عنوان أو اسم الدرس الجديد',
-                  labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12),
-                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: Colors.grey[200]!)),
-                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: AppColors.primary)),
-                ),
+                decoration: InputDecoration(hintText: 'مثال: الدرس الأول: التعبير الرمزي عن الدالة', hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12), filled: true, fillColor: const Color(0xFFF8FAFC), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)),
               ),
-              const SizedBox(height: 25),
+              const SizedBox(height: 20),
               SizedBox(
-                width: double.infinity,
-                height: 48,
+                width: double.infinity, height: 48,
                 child: ElevatedButton(
                   onPressed: () {
-                    if (lessonController.text.trim().isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('من فضلك أدخل اسم الدرس أولاً', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                    if (lessonController.text.trim().isNotEmpty) {
+                      BlocProvider.of<TeacherAcademicCubit>(context).addLesson(
+                        subjectId: widget.subjectId,
+                        term: widget.term,
+                        unitTitle: widget.unitName,
+                        lessonName: lessonController.text.trim(),
+                        currentUnits: currentUnits,
                       );
-                      return;
+                      Navigator.pop(sheetContext);
                     }
-
-                    setState(() {
-                      _lessons.add(lessonController.text.trim());
-                    });
-
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('تم إضافة الدرس الجديد للوحدة بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.primary),
-                    );
                   },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF005F61), 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), 
-                    elevation: 0,
-                  ),
-                  child: const Text('إدراج الدرس الآن', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                  child: const Text('إضافة الدرس حياً', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ),
             ],
@@ -93,83 +76,97 @@ class _TeacherLessonsScreenState extends State<TeacherLessonsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double headerHeight = MediaQuery.of(context).size.height * 0.20;
+    final double headerHeight = MediaQuery.of(context).size.height * 0.22;
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openAddLessonBottomSheet,
-        backgroundColor: const Color(0xFFE6A100),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        icon: const Icon(Icons.add_to_photos_rounded, color: Colors.white, size: 18),
-        label: const Text('إضافة درس للوحدة', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 12)),
-      ),
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Stack(
-          children: [
-            // ==================== 1. قائمة كروت الدروس التفاعلية (في الخلفية أولاً) ====================
-            // 💎 نقلنا محتوى اللستة ليكون أول عنصر في الـ Stack ليسمح لما بعده بالظهور والضغط 💎
-            Positioned.fill(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                child: _lessons.isEmpty
-                    ? const Center(child: Text('لا توجد دروس مضافة في هذه الوحدة حالياً.', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey)))
-                    : ListView.builder(
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: _lessons.length,
-                        padding: EdgeInsets.fromLTRB(0, headerHeight + 15, 0, 80),
-                        itemBuilder: (context, index) {
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 6),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.01 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 3))],
-                            ),
-                            child: ListTile(
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                              leading: const CircleAvatar(backgroundColor: Color(0xFFFEF6E5), child: Icon(Icons.menu_book_rounded, color: Color(0xFFE6A100), size: 18)),
-                              title: Text(
-                                _lessons[index], 
-                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, fontWeight: FontWeight.bold, color: AppColors.textMain),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
+    return BlocBuilder<TeacherAcademicCubit, TeacherAcademicState>(
+      builder: (context, state) {
+        List<dynamic> currentUnits = [];
+        List<dynamic> lessons = [];
+
+        if (state is AcademicLoaded) {
+          currentUnits = state.units;
+          final currentUnit = currentUnits.firstWhere((u) => u['title'] == widget.unitName, orElse: () => {});
+          lessons = currentUnit['lessons'] ?? [];
+        }
+
+        return Scaffold(
+          backgroundColor: const Color(0xFFF8FAFC),
+          floatingActionButton: FloatingActionButton.extended(
+            onPressed: () => _openAddLessonBottomSheet(currentUnits),
+            backgroundColor: const Color(0xFFE6A100),
+            icon: const Icon(Icons.add_rounded, color: Colors.white),
+            label: const Text('إضافة درس جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
+          ),
+          body: Directionality(
+            textDirection: TextDirection.rtl,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: lessons.isEmpty
+                      ? const Center(child: Text('لا توجد دروس مضافة في هذه الوحدة حالياً.', style: TextStyle(fontFamily: 'Cairo')))
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: EdgeInsets.fromLTRB(20, headerHeight + 20, 20, 100),
+                          itemCount: lessons.length,
+                          itemBuilder: (context, index) {
+                            final lesson = lessons[index];
+                            final String lessonTitle = lesson['title'] ?? '';
+                            final bool hasVideo = (lesson['videoUrl'] ?? '').toString().isNotEmpty;
+                            final bool hasQuiz = (lesson['questions'] ?? []).isNotEmpty;
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(18), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.02 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
+                              child: ListTile(
+                                contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                                leading: const CircleAvatar(backgroundColor: Color(0xFFEDF7F7), child: Icon(Icons.menu_book_rounded, color: Color(0xFF005F61), size: 20)),
+                                title: Text(lessonTitle, style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black)),
+                                subtitle: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Row(
+                                    children: [
+                                      _buildContentIndicator(Icons.play_circle_outline, 'فيديو', hasVideo),
+                                      const SizedBox(width: 12),
+                                      _buildContentIndicator(Icons.assignment_outlined, 'اختبار', hasQuiz),
+                                    ],
+                                  ),
+                                ),
+                                trailing: const Icon(Icons.settings_suggest_rounded, size: 18, color: Color(0xFF005F61)),
+                                onTap: () {
+                                  // 💎 تمرير البيانات والـ Cubit لايف لشاشة الـ Hub المجمعة 💎
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) => BlocProvider.value(
+                                        value: BlocProvider.of<TeacherAcademicCubit>(context),
+                                        child: LessonContentHubScreen(
+                                          lessonName: lessonTitle,
+                                          unitName: widget.unitName,
+                                          stageName: widget.stageName,
+                                          subjectId: widget.subjectId,
+                                          term: widget.term,
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
                               ),
-                              trailing: const Icon(Icons.settings_suggest_rounded, size: 18, color: Color(0xFF005F61)),
-                              onTap: () {
-                                // 💥 التوجيه الفخم والمعدل لشاشة الـ Hub المجمعة والمؤمنة بالكامل 💥
-                                Navigator.pushNamed(context, Routes.LessonContentHubScreen);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ),
-
-            // ==================== 2. البانر العلوي الموحد (في المقدمة آخراً) ====================
-            // 💎 تم وضعه آخراً ليكون طافياً فوق محاذاة الاسكرول وتصبح أزراره نشطة وقابلة للمس 💎
-            Positioned(
-              top: 0, left: 0, right: 0, height: headerHeight-20,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft),
-                  //borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
+                            );
+                          },
+                        ),
                 ),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Column(
-                      children: [
-                        SizedBox(height: 20),
-                        Row(
-                          
+                Positioned(
+                  top: 0, left: 0, right: 0, height: headerHeight,
+                  child: Container(
+                    decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft), borderRadius: BorderRadius.only(bottomLeft: Radius.circular(35), bottomRight: Radius.circular(35))),
+                    child: SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: Row(
                           children: [
                             IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                              onPressed: () => Navigator.pushNamed(context, Routes.TeacherUnitsScreen), // سيعمل كالسحر فوراً وبدون أي عوائق!
+                              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18), 
+                              onPressed: () => Navigator.pop(context), // حل مشكلة التجميد هنا
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -185,15 +182,25 @@ class _TeacherLessonsScreenState extends State<TeacherLessonsScreen> {
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildContentIndicator(IconData icon, String label, bool isAvailable) {
+    return Row(
+      children: [
+        Icon(icon, size: 14, color: isAvailable ? const Color(0xFF27AE60) : Colors.grey),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: isAvailable ? const Color(0xFF27AE60) : Colors.grey, fontWeight: isAvailable ? FontWeight.bold : FontWeight.normal)),
+      ],
     );
   }
 }

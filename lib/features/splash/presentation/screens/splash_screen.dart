@@ -59,9 +59,9 @@ class _SplashScreen extends State<SplashScreen>
             // التوجيه الحركي الصارم حسب صلاحيات الحساب الموثق
             if (role == 'admin') {
               Navigator.pushReplacementNamed(context, Routes.AdminMainWrapper);
-            } else if (role == 'teacher') {
+            } else if (role == 'teacher') {///////////////teacher
               Navigator.pushReplacementNamed(context, Routes.TeacherMainWrapper);
-            } else if (role == 'parent') {
+            } else if (role == 'parent') {/////////parent
               Navigator.pushReplacementNamed(context, Routes.ParentWrapper);
             } else {
               Navigator.pushReplacementNamed(context, Routes.MainWrapper); // الطالب الافتراضي

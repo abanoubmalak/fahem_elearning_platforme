@@ -33,10 +33,18 @@ class _QuizScreenState extends State<QuizScreen> {
   }) async {
     try {
       // 👈 تم تعديل المسار ليكون ديناميكي بناءً على المادة والترم لضمان الحفظ المظبوط
-      final documentRef = FirebaseFirestore.instance.collection('subjects_content').doc('${widget.studentTerm}_${widget.subjectId}');
+      // 👈 الإصلاح: الـ document ID الحقيقي في Firestore شكله "sci_الترم الثاني"
+      // (subjectId الأول وبعده term)، لكن الكود كان بيركبه بالعكس "الترم الثاني_sci"
+      // فمكنش يلاقي الدوكيومنت أبداً، وكان يرجع (return) بصمت من غير ما يحفظ أي درجة
+      // أو يعلّم الدرس كـ "مكتمل" - وده سبب إن نتيجة الكويز ونسبة الفيديوهات
+      // في شاشة الأداء مكانت بتتحدث.
+      final documentRef = FirebaseFirestore.instance.collection('subjects_content').doc('${widget.subjectId}_${widget.studentTerm}');
       
       final docSnapshot = await documentRef.get();
-      if (!docSnapshot.exists) return;
+      if (!docSnapshot.exists) {
+        debugPrint('⚠️ لم يتم العثور على دوكيومنت: ${documentRef.path}');
+        return;
+      }
 
       final data = docSnapshot.data() as Map<String, dynamic>;
       final List<dynamic> units = data['units'] ?? [];

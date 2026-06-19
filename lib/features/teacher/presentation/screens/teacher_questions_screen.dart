@@ -1,7 +1,8 @@
 // lib/features/teacher/presentation/screens/dashboard/teacher_questions_screen.dart
 import 'package:fahem/core/constants/colors.dart';
-import 'package:fahem/core/routing/routes.dart';
+import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class TeacherQuestionsScreen extends StatefulWidget {
   const TeacherQuestionsScreen({super.key});
@@ -11,41 +12,47 @@ class TeacherQuestionsScreen extends StatefulWidget {
 }
 
 class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
-  // محاكاة لأسئلة الطلاب
-  final List<Map<String, dynamic>> _questions = [
-    {'student': 'محمد أحمد', 'question': 'ممكن شرح تاني لمسألة التعبير الرمزي؟', 'isReplied': true},
-    {'student': 'سارة علي', 'question': 'هو المثال التاني في صفحة 15 جاي في الامتحان؟', 'isReplied': false},
-    {'student': 'يوسف خالد', 'question': 'شكراً جداً يا مستر، الشرح كان ممتاز!', 'isReplied': true},
-  ];
-
-  // دالة فتح صندوق الرد
-  void _openReplyBottomSheet(int index) {
+  void _openReplyBottomSheet(Map<String, dynamic> questionData) {
     final TextEditingController replyController = TextEditingController();
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(25))),
-      builder: (context) => Directionality(
+      // 👈 تم تغيير الاسم لـ sheetContext لكسر الحجب مع سياق الشاشة الأصلي
+      builder: (sheetContext) => Directionality(
         textDirection: TextDirection.rtl,
         child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).viewInsets.bottom + 20),
+          padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 20),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('رد على: ${_questions[index]['student']}', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+              const Text('إرسال رد للطالب', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
               const SizedBox(height: 15),
+              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)), child: Text(questionData['question'] ?? '', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.5))),
+              const SizedBox(height: 20),
               TextField(
                 controller: replyController,
-                maxLines: 3,
-                decoration: InputDecoration(hintText: 'اكتب ردك هنا...', border: OutlineInputBorder(borderRadius: BorderRadius.circular(12))),
+                maxLines: 4,
+                decoration: InputDecoration(hintText: 'اكتب ردك الأكاديمي هنا...', hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12), filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(15), borderSide: const BorderSide(color: Color(0xFF005F61)))),
               ),
-              const SizedBox(height: 15),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() => _questions[index]['isReplied'] = true);
-                  Navigator.pop(context);
-                },
-                child: const Text('إرسال الرد'),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity, height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    if (replyController.text.trim().isNotEmpty) {
+                      // 👈 استدعاء الـ context الأصلي التابع للشاشة للوصول للـ Cubit بنجاح
+                      BlocProvider.of<TeacherCubit>(context).replyToQuestion(questionData['id'], replyController.text.trim());
+                      Navigator.pop(sheetContext); // 👈 إغلاق الشيت بسياق الشيت المخصص
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال الرد للطالب بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)));
+                    }
+                  },
+                  icon: const Icon(Icons.send_rounded, color: Colors.white, size: 18),
+                  label: const Text('إرسال الرد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                ),
               ),
             ],
           ),
@@ -56,78 +63,100 @@ class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final double headerHeight = (MediaQuery.of(context).size.height * 0.20) - 20;
+    final double headerHeight = MediaQuery.of(context).size.height * 0.18;
 
-    return Scaffold(
-      backgroundColor: AppColors.scaffoldBackground,
-      body: Directionality(
-        textDirection: TextDirection.rtl,
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: ListView.builder(
-                padding: EdgeInsets.fromLTRB(20, headerHeight + 20, 20, 30),
-                itemCount: _questions.length,
-                itemBuilder: (context, index) {
-                  final q = _questions[index];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(backgroundColor: const Color(0xFFEDF7F7), child: Text(q['student'][0], style: const TextStyle(color: Color(0xFF005F61)))),
-                            const SizedBox(width: 10),
-                            Text(q['student'], style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        Text(q['question'], style: const TextStyle(fontFamily: 'Cairo')),
-                        const SizedBox(height: 10),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: TextButton.icon(
-                            onPressed: q['isReplied'] ? null : () => _openReplyBottomSheet(index),
-                            icon: Icon(q['isReplied'] ? Icons.check_circle : Icons.reply_rounded),
-                            label: Text(q['isReplied'] ? 'تم الرد' : 'رد الآن'),
+    return BlocBuilder<TeacherCubit, TeacherState>(
+      builder: (context, state) {
+        if (state is TeacherLoaded) {
+          final questions = state.questions;
+
+          return Scaffold(
+            backgroundColor: AppColors.scaffoldBackground,
+            body: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: questions.isEmpty 
+                    ? const Center(child: Text('لا توجد أسئلة من الطلاب حالياً.', style: TextStyle(fontFamily: 'Cairo')))
+                    : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: EdgeInsets.fromLTRB(20, headerHeight + 20, 20, 100),
+                      itemCount: questions.length,
+                      itemBuilder: (context, index) {
+                        final q = questions[index];
+                        final bool isReplied = q['isReplied'] ?? false;
+                        
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const CircleAvatar(radius: 18, backgroundColor: Color(0xFFEDF7F7), child: Icon(Icons.person_outline_rounded, color: Color(0xFF005F61), size: 18)),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: Text(q['studentName'] ?? 'طالب', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textMain))),
+                                  Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4), decoration: BoxDecoration(color: isReplied ? const Color(0xFFEAFAF1) : const Color(0xFFFFEAEA), borderRadius: BorderRadius.circular(8)), child: Text(isReplied ? 'تم الرد' : 'بانتظار ردك', style: TextStyle(fontFamily: 'Cairo', fontSize: 10, fontWeight: FontWeight.bold, color: isReplied ? const Color(0xFF27AE60) : Colors.redAccent))),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Text(q['question'] ?? '', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey[800], height: 1.5)),
+                              if (!isReplied) ...[
+                                const SizedBox(height: 16),
+                                SizedBox(width: double.infinity, height: 40, child: OutlinedButton.icon(onPressed: () => _openReplyBottomSheet(q), icon: const Icon(Icons.reply_rounded, size: 16), label: const Text('إرسال رد', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold)), style: OutlinedButton.styleFrom(foregroundColor: const Color(0xFF005F61), side: const BorderSide(color: Color(0xFF005F61)), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))))),
+                              ],
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
-            Positioned(
-              top: 0, left: 0, right: 0, height: headerHeight-20,
-              child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft),
-                  //borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
-                ),
-                child: SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(height: 20,),
-                        // IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white), 
-                        // onPressed: () { Navigator.pushNamed(context, Routes.TeacherMainWrapper);}),
-                        const Text('أسئلة الطلاب', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)
-                        ),
-                      ],
+                        );
+                      },
                     ),
                   ),
-                ),
+                  Positioned(
+                    top: 0, left: 0, right: 0, height: headerHeight - 20,
+                    child: Container(
+                      decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft)),
+                      child: const SafeArea(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 12.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              SizedBox(height: 20),
+                              Text('أسئلة الطلاب', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, color: Colors.white, fontWeight: FontWeight.bold)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ],
-        ),
-      ),
+          );
+        }
+        // 👈 هذا الكود يوضع كبديل لـ return const SizedBox(); 
+        if (state is TeacherLoading || state is TeacherInitial) {
+          return const Scaffold(
+            backgroundColor: AppColors.scaffoldBackground,
+            body: Center(child: CircularProgressIndicator(color: Color(0xFF005F61))),
+          );
+        }
+        if (state is TeacherError) {
+          return Scaffold(
+            backgroundColor: AppColors.scaffoldBackground,
+            body: Center(
+              child: Text(
+                state.message, 
+                style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.redAccent, fontSize: 16),
+              ),
+            ),
+          );
+        }
+        return const SizedBox();
+      },
     );
   }
 }
