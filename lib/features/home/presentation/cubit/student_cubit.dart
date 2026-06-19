@@ -17,6 +17,8 @@ class StudentLoaded extends StudentState {
   final String term;
   final String linkingCode;
   final bool hasSubscription;
+  final double overallProgress; 
+  final List<dynamic> unlockedPackages;
 
   StudentLoaded({
     required this.subjects, 
@@ -26,6 +28,8 @@ class StudentLoaded extends StudentState {
     required this.term, 
     required this.linkingCode,
     required this.hasSubscription,
+    required this.overallProgress,
+    required this.unlockedPackages,
   });
 }
 
@@ -38,6 +42,8 @@ class StudentUpdateSuccess extends StudentLoaded {
     required super.term,
     required super.linkingCode,
     required super.hasSubscription,
+    required super.overallProgress,
+    required super.unlockedPackages,
   });
 }
 
@@ -53,54 +59,119 @@ class StudentCubit extends Cubit<StudentState> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  void safeEmit(StudentState state) {
+    if (!isClosed) {
+      emit(state);
+    }
+  }
+
   Future<void> loadStudentDashboard() async {
     if (state is StudentLoading || (state is StudentLoaded && (state as StudentLoaded).subjects.isNotEmpty)) {
       return;
     }
 
-    emit(StudentLoading());
+    safeEmit(StudentLoading());
     try {
       await Future.delayed(const Duration(milliseconds: 500));
 
       User? currentUser = _auth.currentUser;
       if (currentUser == null) {
-        emit(StudentError('لم يتم العثور على جلسة مستخدم نشطة ❌'));
+        safeEmit(StudentError('لم يتم العثور على جلسة مستخدم نشطة ❌'));
         return;
       }
 
-      DocumentSnapshot userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      DocumentSnapshot studentDoc = await _firestore.collection('students').doc(currentUser.uid).get();
 
-      if (userDoc.exists && userDoc.data() != null) {
-        Map<String, dynamic> data = userDoc.data() as Map<String, dynamic>;
+      if (!studentDoc.exists || studentDoc.data() == null) {
+        await _firestore.collection('students').doc(currentUser.uid).set({
+          'name': 'طالب فاهم (تجريبي)',
+          'email': currentUser.email ?? 'student@fahem.com',
+          'stage': 'الصف الأول الإعدادي',
+          'term': 'الترم الثاني',
+          'isActive': true,
+          'linkCode': 'FAHEM-${currentUser.uid.substring(0, 5).toUpperCase()}',
+          'unlockedPackages': ['sci_g1_t2'],
+        }, SetOptions(merge: true));
 
-        String liveName = data['name'] ?? 'طالب فاهم';
-        String liveEmail = data['email'] ?? currentUser.email ?? '';
-        String liveGrade = data['grade'] ?? 'غير محدد';
-        String liveTerm = data['term'] ?? 'الترم الأول';
-        bool liveSubscription = data['has_active_subscription'] ?? false;
-        String liveCode = data['linking_code'] ?? 'FAHEM-${currentUser.uid.substring(0, 5).toUpperCase()}';
-
-        List<SubjectModel> filteredSubjects = SubjectProvider.getSubjectsByGrade(liveGrade);
-
-        emit(StudentLoaded(
-          subjects: filteredSubjects,
-          name: liveName,
-          email: liveEmail,
-          grade: liveGrade,
-          term: liveTerm,
-          linkingCode: liveCode,
-          hasSubscription: liveSubscription,
-        ));
-      } else {
-        emit(StudentError('مستند بيانات الطالب غير موجود ⚠️'));
+        studentDoc = await _firestore.collection('students').doc(currentUser.uid).get();
       }
+
+      Map<String, dynamic> data = studentDoc.data() as Map<String, dynamic>;
+
+      String liveName = data['name'] ?? 'طالب فاهم';
+      String liveEmail = data['email'] ?? currentUser.email ?? '';
+      String liveGrade = data['stage'] ?? 'الصف الأول الإعدادي';
+      String liveTerm = data['term'] ?? 'الترم الثاني';
+      String liveCode = data['linkCode'] ?? 'FAHEM-${currentUser.uid.substring(0, 5).toUpperCase()}';
+      
+      List<dynamic> unlockedPackages = data['unlockedPackages'] ?? [];
+      bool liveSubscription = unlockedPackages.isNotEmpty;
+
+      // 1. جلب سجل تقدم الطالب بالكامل
+      QuerySnapshot progressSnap = await _firestore.collection('student_progress')
+          .where('studentId', isEqualTo: currentUser.uid).get();
+      
+      double totalScore = 0.0;
+      // خريطة لحساب مجمّع التقدم لكل مادة بشكل مستقل عن الأخرى
+      Map<String, double> subjectProgressMap = {};
+      Map<String, int> subjectCountMap = {};
+
+      if (progressSnap.docs.isNotEmpty) {
+        for (var doc in progressSnap.docs) {
+          final pData = doc.data() as Map<String, dynamic>;
+          final String subId = pData['subjectId'] ?? 'sci';
+          final double quizScore = (pData['quizScore'] ?? 0).toDouble();
+          final bool isWatched = pData['isVideoWatched'] ?? false;
+          
+          double lessonProgress = (isWatched ? 0.4 : 0) + ((quizScore / 10) * 0.6);
+          totalScore += lessonProgress;
+
+          // تجميع القيم حسب المادة لتحديث الـ Progress Bar الخاص بكل مادة
+          subjectProgressMap[subId] = (subjectProgressMap[subId] ?? 0.0) + lessonProgress;
+          subjectCountMap[subId] = (subjectCountMap[subId] ?? 0) + 1;
+        }
+        totalScore = totalScore / progressSnap.docs.length; 
+      }
+
+      // 2. ربط وحقن التقدم الحقيقي داخل كروت المواد
+      List<SubjectModel> rawSubjects = SubjectProvider.getSubjectsByGrade(liveGrade);
+      List<SubjectModel> processedSubjects = rawSubjects.map((sub) {
+        String stageCode = 'g1';
+        if (liveGrade == 'الصف الثاني الإعدادي') stageCode = 'g2';
+        if (liveGrade == 'الصف الثالث الإعدادي') stageCode = 'g3';
+        String termCode = liveTerm == 'الترم الأول' ? 't1' : 't2';
+        String packageId = '${sub.id}_${stageCode}_${termCode}';
+
+        // حساب التقدم الفردي للمادة الحالية بناءً على الداتابيز
+        double calculatedSubjectProgress = 0.0;
+        if (subjectCountMap.containsKey(sub.id) && subjectCountMap[sub.id]! > 0) {
+          calculatedSubjectProgress = subjectProgressMap[sub.id]! / subjectCountMap[sub.id]!;
+        }
+
+        return sub.copyWith(
+          isUnlocked: unlockedPackages.contains(packageId),
+          packageId: packageId,
+          progress: calculatedSubjectProgress > 0 ? calculatedSubjectProgress : 0.0, // حقن القيمة الحية
+        );
+      }).toList();
+
+      safeEmit(StudentLoaded(
+        subjects: processedSubjects,
+        name: liveName,
+        email: liveEmail,
+        grade: liveGrade,
+        term: liveTerm,
+        linkingCode: liveCode,
+        hasSubscription: liveSubscription,
+        overallProgress: totalScore,
+        unlockedPackages: unlockedPackages,
+      ));
+      
     } catch (e) {
-      emit(StudentError('حدث خطأ أثناء مزامنة بياناتك الأكاديمية.'));
+      safeEmit(StudentError('حدث خطأ أثناء مزامنة بياناتك الأكاديمية: $e'));
     }
   }
 
-  // دالة التحديث الشاملة (بيانات دراسية + أمان)
-  // دالة التحديث الشاملة (بيانات دراسية + أمان)
   Future<void> updateStudentProfile({
     required String newName, 
     required String newGrade, 
@@ -108,71 +179,75 @@ class StudentCubit extends Cubit<StudentState> {
     String? oldPassword, 
     String? newPassword,
   }) async {
-    // 👈 1. أخذ نسخة احتياطية من الحالة الحالية لإرجاعها عند حدوث خطأ لمنع تجمد الشاشة
     if (state is! StudentLoaded) return;
     final currentState = state as StudentLoaded;
-
-    emit(StudentLoading()); // تشغيل اللودر
+    safeEmit(StudentLoading());
 
     try {
       User? currentUser = _auth.currentUser;
       if (currentUser == null) return;
 
-      // 2. فحص وتحديث كلمة المرور
       if (oldPassword != null && newPassword != null && oldPassword.isNotEmpty && newPassword.isNotEmpty) {
-        print('=== [StudentCubit 🔐] جاري فحص كلمة المرور القديمة ===');
         try {
-          AuthCredential credential = EmailAuthProvider.credential(
-            email: currentUser.email!,
-            password: oldPassword,
-          );
+          AuthCredential credential = EmailAuthProvider.credential(email: currentUser.email!, password: oldPassword);
           await currentUser.reauthenticateWithCredential(credential);
           await currentUser.updatePassword(newPassword);
-          print('=== [StudentCubit 🔐] تم تحديث كلمة المرور بنجاح! ===');
         } on FirebaseAuthException catch (e) {
-          // 👈 بث حالة الخطأ لعرضها، ثم استرجاع واجهة المستخدم فوراً
           if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
-            emit(StudentError('كلمة المرور الحالية التي أدخلتها غير صحيحة ❌'));
+            safeEmit(StudentError('كلمة المرور الحالية التي أدخلتها غير صحيحة ❌'));
           } else {
-            emit(StudentError('حدث خطأ أثناء تحديث كلمة المرور، حاول مجدداً.'));
+            safeEmit(StudentError('حدث خطأ أثناء تحديث كلمة المرور، حاول مجدداً.'));
           }
-          emit(currentState); // إرجاع الواجهة بدون فقدان البيانات المكتوبة
-          return; // إيقاف التنفيذ وعدم حفظ التعديلات الأخرى
+          safeEmit(currentState); 
+          return; 
         }
       }
 
-      // 3. تحديث البيانات الدراسية في الفايرستور سحابياً
-      await _firestore.collection('users').doc(currentUser.uid).update({
+      await _firestore.collection('students').doc(currentUser.uid).update({
         'name': newName.trim(),
-        'grade': newGrade,
+        'stage': newGrade,
         'term': newTerm,
       });
 
-      // 4. التحديث المحلي الفوري
-      List<SubjectModel> updatedSubjects = SubjectProvider.getSubjectsByGrade(newGrade);
+      List<SubjectModel> rawSubjects = SubjectProvider.getSubjectsByGrade(newGrade);
+      List<SubjectModel> processedSubjects = rawSubjects.map((sub) {
+        String stageCode = 'g1';
+        if (newGrade == 'الصف الثاني الإعدادي') stageCode = 'g2';
+        if (newGrade == 'الصف الثالث الإعدادي') stageCode = 'g3';
+        String termCode = newTerm == 'الترم الأول' ? 't1' : 't2';
+        String packageId = '${sub.id}_${stageCode}_${termCode}';
 
-      emit(StudentUpdateSuccess(
-        subjects: updatedSubjects,
+        return sub.copyWith(
+          isUnlocked: currentState.unlockedPackages.contains(packageId),
+          packageId: packageId,
+          progress: sub.progress, 
+        );
+      }).toList();
+
+      safeEmit(StudentUpdateSuccess(
+        subjects: processedSubjects,
         name: newName.trim(),
         email: currentState.email,
         grade: newGrade,
         term: newTerm,
         linkingCode: currentState.linkingCode,
         hasSubscription: currentState.hasSubscription,
+        overallProgress: currentState.overallProgress,
+        unlockedPackages: currentState.unlockedPackages,
       ));
       
     } catch (e) {
-      emit(StudentError('فشل في حفظ التعديلات، يرجى المحاولة لاحقاً.'));
-      emit(currentState); // إرجاع الواجهة عند الخطأ
+      safeEmit(StudentError('فشل في حفظ التعديلات، يرجى المحاولة لاحقاً.'));
+      safeEmit(currentState);
     }
   }
   
   Future<void> signOutUser() async {
     try {
       await _auth.signOut();
-      emit(StudentLoggedOut());
+      safeEmit(StudentLoggedOut());
     } catch (e) {
-      emit(StudentError('حدث خطأ أثناء تسجيل الخروج.'));
+      safeEmit(StudentError('حدث خطأ أثناء تسجيل الخروج.'));
     }
   }
 }

@@ -1,5 +1,6 @@
 // lib/features/teachers/presentation/screens/chat_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 استيراد المصادقة للحصول على الـ UID الحقيقي
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
@@ -21,16 +22,16 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   
-  // معرف ثابت وموحد للغرفة (مثال مبسط لمشروع التخرج يربط الطالب الحالي بالمعلم)
-  // في التطبيق الفعلي يفضل استخدام الـ uid الخاص بالطالب
-  final String _studentId = "abanoub_student"; 
+  // 👈 المتغيرات المنطقية
   late String _chatRoomId;
 
   @override
   void initState() {
     super.initState();
-    // إنشاء معرف فريد لغرفة المحادثة يجمع المعلم والطالب معاً منعاً لتداخل المحادثات
-    _chatRoomId = "${_studentId}_${widget.teacherName.replaceAll(' ', '_')}";
+    // 💎 منطق ذكي لإنشاء معرف الغرفة:
+    // نأخذ الـ UID الخاص بالطالب + اسم المعلم، لضمان تفرّد المحادثة
+    final String studentUid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_student';
+    _chatRoomId = "${studentUid}_${widget.teacherName.replaceAll(' ', '_')}";
   }
 
   // دالة إرسال الرسالة وحفظها في الفايربيز حياً
@@ -47,8 +48,8 @@ class _ChatScreenState extends State<ChatScreen> {
         .collection('messages')
         .add({
       'text': messageText,
-      'isMe': true, // الطالب هو الراسل في تطبيقه الحالي
-      'timestamp': FieldValue.serverTimestamp(), // اعتماد وقت السيرفر لترتيب الرسائل بدقة
+      'isMe': true, 
+      'timestamp': FieldValue.serverTimestamp(), 
     });
 
     _scrollToBottom();
@@ -75,9 +76,9 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // ⚠️ لا تغيير في التصميم أبداً ⚠️
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      // ==================== 1. شريط علوي يحمل بيانات المعلم وحالته ====================
       appBar: AppBar(
         backgroundColor: const Color(0xFF005F61),
         elevation: 0,
@@ -119,14 +120,13 @@ class _ChatScreenState extends State<ChatScreen> {
         textDirection: TextDirection.rtl,
         child: Column(
           children: [
-            // ==================== 2. منطقة عرض الرسائل الحية من الفايربيز ====================
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
                     .collection('chats')
                     .doc(_chatRoomId)
                     .collection('messages')
-                    .orderBy('timestamp', descending: false) // ترتيب تصاعدي لعرض المحادثة منطقياً
+                    .orderBy('timestamp', descending: false)
                     .snapshots(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
@@ -142,8 +142,6 @@ class _ChatScreenState extends State<ChatScreen> {
                   }
 
                   final messageDocs = snapshot.data!.docs;
-                  
-                  // عمل سكرول تلقائي لآخر المحادثة فور وصول بيانات جديدة
                   WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
                   return ListView.builder(
@@ -153,8 +151,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemCount: messageDocs.length,
                     itemBuilder: (context, index) {
                       final docData = messageDocs[index].data() as Map<String, dynamic>;
-                      
-                      // معالجة الوقت والتاريخ لتجنب مشاكل الـ Null قبل وصول الـ Timestamp من السيرفر
                       final Timestamp? timestamp = docData['timestamp'] as Timestamp?;
                       final String timeString = timestamp != null 
                           ? "${timestamp.toDate().hour}:${timestamp.toDate().minute.toString().padLeft(2, '0')}" 
@@ -170,8 +166,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 },
               ),
             ),
-
-            // ==================== 3. شريط إدخال الرسائل السفلي الراقي ====================
             Container(
               padding: EdgeInsets.fromLTRB(16, 8, 16, MediaQuery.of(context).padding.bottom + 8),
               decoration: BoxDecoration(
@@ -204,7 +198,7 @@ class _ChatScreenState extends State<ChatScreen> {
                                 border: InputBorder.none,
                                 isDense: true,
                               ),
-                              onSubmitted: (_) => _sendMessage(), // إمكانية الإرسال عبر زر الكيبورد
+                              onSubmitted: (_) => _sendMessage(),
                             ),
                           ),
                           const Icon(Icons.attach_file_rounded, color: Colors.grey, size: 20),
@@ -213,7 +207,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   const SizedBox(width: 10),
-                  
                   GestureDetector(
                     onTap: _sendMessage,
                     child: const CircleAvatar(

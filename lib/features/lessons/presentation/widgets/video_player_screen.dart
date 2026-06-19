@@ -1,4 +1,6 @@
 // lib/features/lessons/screens/video_player_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 إضافة الفايربيز
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 إضافة الأوث
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/lessons/presentation/screens/quiz_screen.dart';
 import 'package:flutter/material.dart';
@@ -9,8 +11,8 @@ class VideoPlayerScreen extends StatefulWidget {
   final String lessonTitle;
   final String videoUrl; 
   final List<dynamic> questions; 
-  final String subjectId; // 👈 إضافة معرف المادة
-  final String studentTerm; // 👈 إضافة معرف الترم
+  final String subjectId; 
+  final String studentTerm;
 
   const VideoPlayerScreen({
     super.key, 
@@ -39,6 +41,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
           setState(() { _isInitialized = true; });
         }
       });
+  }
+
+  // 💎 دالة تحديث حالة المشاهدة في الفايربيز
+  Future<void> _markVideoAsWatched() async {
+    try {
+      final String studentId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (studentId.isEmpty) return;
+
+      await FirebaseFirestore.instance
+          .collection('student_progress')
+          .doc('${studentId}_${widget.subjectId}_${widget.lessonTitle.replaceAll(" ", "_")}')
+          .set({
+        'studentId': studentId,
+        'subjectId': widget.subjectId,
+        'lessonTitle': widget.lessonTitle,
+        'isVideoWatched': true, // 👈 تحديث أن الفيديو اتشاف
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e) {
+      debugPrint('❌ خطأ في حفظ المشاهدة: $e');
+    }
   }
 
   void _toggleFullscreen() {
@@ -83,6 +106,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                           ? FittedBox(fit: BoxFit.cover, child: SizedBox(width: _controller.value.size.width, height: _controller.value.size.height, child: VideoPlayer(_controller)))
                           : const Center(child: CircularProgressIndicator(color: AppColors.primary)),
                     ),
+                    // ... (باقي كود التصميم كما هو تماماً)
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -142,14 +166,18 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                       SizedBox(
                         width: double.infinity, height: 54,
                         child: ElevatedButton.icon(
-                          onPressed: () {
+                          onPressed: () async {
+                            // 💎 المنطق الجديد: تسجيل المشاهدة ثم الانتقال للاختبار
+                            await _markVideoAsWatched(); 
+                            if (!mounted) return;
+                            
                             Navigator.push(
                               context,
                               MaterialPageRoute(
                                 builder: (context) => QuizScreen(
                                   lessonTitle: widget.lessonTitle,
                                   questions: widget.questions,
-                                  subjectId: widget.subjectId, // 👈 تمريرهم للاختبار عشان الحفظ السليم
+                                  subjectId: widget.subjectId,
                                   studentTerm: widget.studentTerm,
                                 ),
                               ),

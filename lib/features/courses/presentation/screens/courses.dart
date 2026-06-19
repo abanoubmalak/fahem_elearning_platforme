@@ -143,24 +143,24 @@ class _MyCoursesScreenState extends State<Courses> {
                         
                         return GestureDetector(
                           onTap: () {
-                                                          // داخل الـ onTap الخاص بالكارت:
-                             // داخل الـ onTap الخاص بالكارت في شاشة courses_screen.dart:
-if (state.hasSubscription) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => SubjectDetailsScreen(
-        // 👈 ثبتنا القيم هنا يدوياً لتطابق الفايربيز 100%
-        subjectId: 'sci', 
-        subjectTitle: subject.title,
-        studentTerm: 'الترم الثاني', 
-      ),
-    ),
-  );
-} else {
-  UiHelpers.showSubscriptionPaywall(context);
-}
+                            // 💎 الفحص المنطقي المحدث لكل مادة بشكل مستقل حياً 💎
+                            if (subject.isUnlocked) {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => SubjectDetailsScreen(
+                                    subjectId: subject.id, 
+                                    subjectTitle: subject.title,
+                                    studentTerm: state.term, 
+                                  ),
+                                ),
+                              );
+                            } else {
+                              // 🔒 إذا كانت المادة مقفولة وغير موجودة مع الطالب، تظهر نافذة الحظر المنبثقة مباشرة
+                              UiHelpers.showSubscriptionPaywall(context);
+                            }
                           },
+                          // شكل الكارت ثابت بدون أي أيقونات أو إضافات في التصميم
                           child: CourseListItem(
                             title: subject.title,
                             progress: subject.progress,

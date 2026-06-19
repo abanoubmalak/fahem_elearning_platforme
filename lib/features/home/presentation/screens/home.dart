@@ -108,6 +108,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
                     // ج) حالة نجاح جلب البيانات (Loaded)
                     if (state is StudentLoaded) {
+                      
+                      // 💎 تحويل النسبة الحية لرقم وشريط تقدم 💎
+                      final String progressPercent = (state.overallProgress * 100).toStringAsFixed(0);
+                      final double progressValue = state.overallProgress > 0 ? state.overallProgress : 0.02;
+
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -145,33 +150,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                     Container(
                                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                                       decoration: BoxDecoration(color: const Color(0xFFFEF6E5), borderRadius: BorderRadius.circular(10)),
-                                      child: const Text('65%', style: TextStyle(fontFamily: 'Montserrat', fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFE6A100))),
+                                      child: Text('$progressPercent%', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFFE6A100))),
                                     ),
                                   ],
                                 ),
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
                                 const SizedBox(height: 16),
                                 ClipRRect(
                                   borderRadius: BorderRadius.circular(10),
-                                  child: const LinearProgressIndicator(
-                                    value: 0.65,
-                                    backgroundColor: Color(0xFFF1F5F9),
-                                    valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF005F61)),
+                                  child: LinearProgressIndicator(
+                                    value: progressValue,
+                                    backgroundColor: const Color(0xFFF1F5F9),
+                                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFF005F61)),
                                     minHeight: 8,
                                   ),
                                 ),
@@ -182,10 +171,13 @@ class _HomeScreenState extends State<HomeScreen> {
                                     const SizedBox(width: 8),
                                     Expanded(
                                       child: Text(
-                                        'أنجزت 65% من منهج الأسبوع! استمر يا بطل.',
+
+                                        
+                                        'أنجزت ${progressPercent}% من منهج الأسبوع! استمر يا بطل.',
                                         style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w600),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
+                                        
                                       ),
                                     ),
                                   ],
@@ -219,8 +211,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 final subject = state.subjects[index];
                                 return GestureDetector(
                                   onTap: () {
-                                    // حارس الحماية: فحص تفعيل باقة ولي الأمر لفتح المحتوى
-                                    if (state.hasSubscription) {
+                                    // 💎 التعديل الجوهري: فحص ما إذا كانت المادة محددة في unlockedPackages
+                                    if (subject.isUnlocked) {
                                       Navigator.push(context, MaterialPageRoute(
                                         builder: (context) => SubjectDetailsScreen(
                                           subjectId: subject.id,
@@ -229,6 +221,9 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ));
                                     } else {
+                                      // إظهار رسالة بأن المادة غير مشترك فيها
+                                      
+                                      // فتح نافذة الدفع
                                       UiHelpers.showSubscriptionPaywall(context);
                                     }
                                   },

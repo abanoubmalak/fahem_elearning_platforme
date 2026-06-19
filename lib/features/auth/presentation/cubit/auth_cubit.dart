@@ -1,5 +1,7 @@
 // lib/features/auth/presentation/cubit/auth_cubit.dart
 import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/email_service.dart';
@@ -27,6 +29,7 @@ class AuthCubit extends Cubit<AuthState> {
  // lib/features/auth/presentation/cubit/auth_cubit.dart
 
   // دالة إتمام التسجيل وتوليد الـ OTP بعد إدخال الـ Role والبيانات الدراسية
+  // دالة إتمام التسجيل وتوليد الـ OTP بعد إدخال الـ Role والبيانات الدراسية
   Future<void> completeRegistration({required String role, String? grade, String? term}) async {
     emit(AuthLoading());
     try {
@@ -38,7 +41,7 @@ class AuthCubit extends Cubit<AuthState> {
       print('=== [AuthCubit] جاري بدء التسجيل السحابي للمستخدم: $tempName ===');
       String generatedOtp = (1000 + Random().nextInt(9000)).toString(); // كود رباعي موحد
 
-      // استدعاء دالة السيرفر وتمرير المتغيرات الصريحة بدلاً من (this) 👈
+      // 1. إنشاء الحساب في Authentication وجدول users
       var user = await _authService.signUpUser(
         name: tempName!,
         email: tempEmail!,
@@ -47,7 +50,38 @@ class AuthCubit extends Cubit<AuthState> {
       ).timeout(const Duration(seconds: 8)); 
 
       if (user != null) {
-        // إرسال بريد التحقق الرقمي عبر خدمة EmailJS
+        // 💎 2. التعديل السحري: إضافة بيانات الطالب أو ولي الأمر في جداولهم المخصصة فوراً
+        final firestore = FirebaseFirestore.instance;
+        
+        if (role == 'student') {
+           String stageCode = 'g1';
+           if (grade == 'الصف الثاني الإعدادي') stageCode = 'g2';
+           if (grade == 'الصف الثالث الإعدادي') stageCode = 'g3';
+           String termCode = term == 'الترم الأول' ? 't1' : 't2';
+           String freePackage = 'sci_${stageCode}_${termCode}'; // فتح العلوم كعينة تجريبية
+
+           await firestore.collection('students').doc(user.uid).set({
+             'name': tempName!.trim(),
+             'email': tempEmail!.trim().toLowerCase(),
+             'stage': grade ?? 'الصف الأول الإعدادي',
+             'term': term ?? 'الترم الثاني',
+             'isActive': false, // لن يتفعل إلا بعد إدخال الـ OTP
+             'linkCode': 'FAHEM-${user.uid.substring(0, 5).toUpperCase()}',
+             'unlockedPackages': [freePackage], 
+             'parentIds': [],
+             'createdAt': FieldValue.serverTimestamp(),
+           });
+        } else if (role == 'parent') {
+           await firestore.collection('parents').doc(user.uid).set({
+             'name': tempName!.trim(),
+             'email': tempEmail!.trim().toLowerCase(),
+             'isActive': false,
+             'linkedStudents': [],
+             'createdAt': FieldValue.serverTimestamp(),
+           });
+        }
+
+        // 3. إرسال بريد التحقق الرقمي عبر خدمة EmailJS
         await _emailService.sendOTPEmail(
           targetEmail: tempEmail!, 
           userName: tempName!, 
@@ -58,7 +92,7 @@ class AuthCubit extends Cubit<AuthState> {
       }
     } catch (e) {
       print('=== [AuthCubit Error 🚨] فشل إتمام الحساب: $e ===');
-      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); // تعريب الأخطاء بشكل موحد
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); 
     }
   }
 
@@ -186,4 +220,28 @@ class AuthCubit extends Cubit<AuthState> {
     
     return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.';
   }
+
+
+
+// ================= 4. دالة نسيان كلمة المرور (الطريقة الرسمية لفايربيز) =================
+  Future<void> sendPasswordResetLink(String email) async {
+    emit(AuthLoading());
+    try {
+      if (email.isEmpty) {
+        emit(AuthFailure('يرجى كتابة البريد الإلكتروني أولاً.'));
+        return;
+      }
+      
+      // الدالة الرسمية من فايربيز التي ترسل رابط تغيير الباسورد للإيميل
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+      
+      // إرسال حالة النجاح للواجهة
+      emit(AuthResetPasswordSuccess()); 
+      
+    } catch (e) {
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
+    }
+  }
+
+
 }

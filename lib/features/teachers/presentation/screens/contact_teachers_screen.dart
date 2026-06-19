@@ -1,7 +1,10 @@
 // lib/features/teachers/presentation/screens/contact_teachers_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
+import 'package:fahem/features/home/presentation/cubit/student_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 class ContactTeachersScreen extends StatefulWidget {
   const ContactTeachersScreen({super.key});
@@ -11,60 +14,14 @@ class ContactTeachersScreen extends StatefulWidget {
 }
 
 class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
-  // قائمة المدرسين
-  final List<Map<String, dynamic>> _teachers = [
-    {
-      'name': 'أ. محمد أحمد',
-      'subject': 'اللغة العربية',
-      'icon': Icons.menu_book_rounded,
-      'isOnline': true,
-      'avatarColor': const Color(0xFFEDF7F7),
-    },
-    {
-      'name': 'أ. سارة جون',
-      'subject': 'اللغة الإنجليزية',
-      'icon': Icons.g_translate_rounded,
-      'isOnline': true,
-      'avatarColor': const Color(0xFFFEF6E5),
-    },
-    {
-      'name': 'أ. رأفت حكيم',
-      'subject': 'الرياضيات',
-      'icon': Icons.calculate_outlined,
-      'isOnline': false,
-      'avatarColor': const Color(0xFFF1F5F9),
-    },
-    {
-      'name': 'أ. ميرفت علي',
-      'subject': 'العلوم',
-      'icon': Icons.biotech_outlined,
-      'isOnline': true,
-      'avatarColor': const Color(0xFFEAFAF1),
-    },
-    {
-      'name': 'أ. خالد محمود',
-      'subject': 'الدراسات الاجتماعية',
-      'icon': Icons.public_rounded,
-      'isOnline': false,
-      'avatarColor': const Color(0xFFFFEAEA),
-    },
-  ];
 
-  // 👈 التعديل هنا: تمرير بيانات المدرس بالكامل للراوتر
   void _startChatWithTeacher(Map<String, dynamic> teacher) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('جاري فتح غرفة المحادثة الآمنة مع ${teacher['name']}...', style: const TextStyle(fontFamily: 'Cairo')),
-        backgroundColor: const Color(0xFF005F61),
-      ),
-    );
-
     Navigator.pushNamed(
       context, 
-      Routes.ChatScreen, // تأكد إن الاسم يبدأ بحرف صغير ليطابق مساراتك
+      Routes.ChatScreen,
       arguments: {
         'teacherName': teacher['name'],
-        'subject': teacher['subject'],
+        'subject': teacher['specialty'], // مفترض يكون specialty في الداتابيز
       },
     );
   }
@@ -106,22 +63,57 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
             ],
           ),
         ),
-        body: ListView.builder(
-          physics: const BouncingScrollPhysics(),
-          itemCount: _teachers.length,
-          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0).copyWith(bottom: 110),
-          itemBuilder: (context, index) {
-            final teacher = _teachers[index];
-            return _buildTeacherCard(teacher);
+        
+        // 💎 المنطق الجديد: جلب المدرسين وفلترتهم بناءً على اشتراك الطالب 💎
+        body: BlocBuilder<StudentCubit, StudentState>(
+          builder: (context, studentState) {
+            if (studentState is! StudentLoaded) {
+              return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
+            }
+
+            return StreamBuilder<QuerySnapshot>(
+              stream: FirebaseFirestore.instance.collection('teachers').where('isActive', isEqualTo: true).snapshots(),
+              builder: (context, snapshot) {
+                if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+                // فلترة المدرسين بناءً على المادة المفتوحة للطالب
+                final List<Map<String, dynamic>> filteredTeachers = [];
+                for (var doc in snapshot.data!.docs) {
+                  final data = doc.data() as Map<String, dynamic>;
+                  final List<dynamic> assignedCourses = data['assignedCourses'] ?? [];
+                  
+                  // تحقق هل المدرس يدرس مادة الطالب مشترك فيها؟
+                  bool canTalk = assignedCourses.any((course) {
+                    // توليد كود المادة (نفس منطق الكوبيت)
+                    String stageCode = course['stage'] == 'الصف الثاني الإعدادي' ? 'g2' : (course['stage'] == 'الصف الثالث الإعدادي' ? 'g3' : 'g1');
+                    String termCode = course['term'] == 'الترم الأول' ? 't1' : 't2';
+                    String packageId = '${course['subject']}_${stageCode}_${termCode}';
+                    return studentState.unlockedPackages.contains(packageId);
+                  });
+
+                  if (canTalk) filteredTeachers.add(data);
+                }
+
+                if (filteredTeachers.isEmpty) {
+                  return const Center(child: Text('لا يوجد معلمون متاحون لموادك الحالية', style: TextStyle(fontFamily: 'Cairo')));
+                }
+
+                return ListView.builder(
+                  physics: const BouncingScrollPhysics(),
+                  itemCount: filteredTeachers.length,
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0).copyWith(bottom: 110),
+                  itemBuilder: (context, index) => _buildTeacherCard(filteredTeachers[index]),
+                );
+              },
+            );
           },
         ),
       ),
     );
   }
 
+  // التصميم ثابت 100% كما هو 
   Widget _buildTeacherCard(Map<String, dynamic> teacher) {
-    final bool isOnline = teacher['isOnline'];
-
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(16),
@@ -130,36 +122,15 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
         borderRadius: BorderRadius.circular(20), 
         border: Border.all(color: Colors.grey.withAlpha((0.06 * 255).toInt())),
         boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha((0.03 * 255).toInt()),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
+          BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 12, offset: const Offset(0, 4)),
         ],
       ),
       child: Row(
         children: [
-          Stack(
-            children: [
-              CircleAvatar(
-                radius: 28,
-                backgroundColor: teacher['avatarColor'],
-                child: Icon(teacher['icon'], color: const Color(0xFF005F61), size: 26),
-              ),
-              Positioned(
-                bottom: 2,
-                left: 2,
-                child: Container(
-                  width: 13,
-                  height: 13,
-                  decoration: BoxDecoration(
-                    color: isOnline ? const Color(0xFF2ECC71) : Colors.grey[400],
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                ),
-              ),
-            ],
+          CircleAvatar(
+            radius: 28,
+            backgroundColor: const Color(0xFFEDF7F7),
+            child: const Icon(Icons.person, color: Color(0xFF005F61), size: 26),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -167,7 +138,7 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  teacher['name'],
+                  teacher['name'] ?? 'معلم',
                   style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textMain),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -175,12 +146,9 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
                 const SizedBox(height: 6),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  decoration: BoxDecoration(color: const Color(0xFFF1F5F9), borderRadius: BorderRadius.circular(8)),
                   child: Text(
-                    teacher['subject'],
+                    teacher['specialty'] ?? teacher['subject'] ?? '',
                     style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey[700]),
                   ),
                 ),
@@ -189,12 +157,9 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
           ),
           const SizedBox(width: 10),
           ElevatedButton.icon(
-            onPressed: () => _startChatWithTeacher(teacher), // 👈 إرسال الكائن بالكامل
+            onPressed: () => _startChatWithTeacher(teacher),
             icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.white),
-            label: const Text(
-              'مراسلة',
-              style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-            ),
+            label: const Text('مراسلة', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFE6A100),
               elevation: 0,

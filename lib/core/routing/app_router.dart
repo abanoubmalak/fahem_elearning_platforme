@@ -119,14 +119,13 @@ class AppRouter {
           ),
         );
 
-      case Routes.MainWrapper:
-        return MaterialPageRoute(
-          builder: (_) => BlocProvider(
-            create: (context) => StudentCubit()..loadStudentDashboard(),
-            child: const MainWrapper(),
-          ),
-        );
-
+     case Routes.MainWrapper:
+ return MaterialPageRoute(
+   builder: (_) => BlocProvider(
+     create: (context) => StudentCubit()..loadStudentDashboard(),
+     child: const MainWrapper(),
+   ),
+ );
       case Routes.VideoPlayerScreen:
         return MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(

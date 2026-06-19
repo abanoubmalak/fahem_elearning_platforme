@@ -1,5 +1,6 @@
 // lib/features/performance/presentation/screens/performance_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 استدعاء الأوث لمعرفة الطالب الحالي
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
@@ -41,67 +42,79 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // 💎 تحديد هوية الطالب الحالي لنجلب بياناته هو فقط
+    final String currentStudentId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
+        // 💎 التعديل المنطقي: قراءة جدول تقدم الطالب بدلاً من جدول المنهج 💎
         body: StreamBuilder<QuerySnapshot>(
-          stream: FirebaseFirestore.instance.collection('subjects_content').snapshots(),
+          stream: FirebaseFirestore.instance
+              .collection('student_progress')
+              .where('studentId', isEqualTo: currentStudentId)
+              .snapshots(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
             }
+            // إذا لم يقم الطالب بأي نشاط بعد
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-              return const Center(child: Text('لا توجد بيانات أداء حالياً.', style: TextStyle(fontFamily: 'Cairo')));
+              return const Center(
+                child: Text(
+                  'لا توجد بيانات أداء حالياً، ابدأ بمشاهدة الدروس وحل الاختبارات!', 
+                  style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontWeight: FontWeight.bold)
+                )
+              );
             }
 
             double totalOverallScore = 0.0;
-            List<Map<String, dynamic>> dynamicSubjectList = [];
-            Set<String> addedSubjects = {}; 
+            Map<String, Map<String, dynamic>> aggregatedData = {};
 
+            // 1. تجميع بيانات الطالب حسب المادة
             for (var doc in snapshot.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
-              final List<dynamic> units = data['units'] ?? [];
-              
-              String subjectName = data['subjectName'] ?? data['title'] ?? SubjectType.fromId(doc.id);
+              String subjectId = data['subjectId'] ?? 'unknown';
+              String subjectName = SubjectType.fromId(subjectId);
 
-              if (addedSubjects.contains(subjectName)) continue;
-
-              int totalLessons = 0;
-              int completedLessons = 0;
-              double totalQuizScores = 0.0;
-
-              for (var unit in units) {
-                final List<dynamic> lessons = unit['lessons'] ?? [];
-                totalLessons += lessons.length;
-                for (var lesson in lessons) {
-                  if (lesson['isCompleted'] == true) {
-                    completedLessons++;
-                  }
-                  totalQuizScores += (lesson['quizScore'] ?? 0.0) as double;
-                }
+              if (!aggregatedData.containsKey(subjectName)) {
+                aggregatedData[subjectName] = {'watchCount': 0.0, 'quizSum': 0.0, 'total': 0};
               }
 
-              double watchProgress = totalLessons > 0 ? (completedLessons / totalLessons) : 0.0;
-              double quizScore = totalLessons > 0 ? (totalQuizScores / totalLessons) : 0.0; 
+              bool isWatched = data['isVideoWatched'] ?? false;
+              double quiz = (data['quizScore'] ?? 0.0).toDouble();
+              // توحيد النسبة لتكون من 0 إلى 1 (لأن الدرجة قد تكون من 10)
+              if (quiz > 1.0) quiz = quiz / 10.0; 
 
+              aggregatedData[subjectName]!['watchCount'] += isWatched ? 1.0 : 0.0;
+              aggregatedData[subjectName]!['quizSum'] += quiz;
+              aggregatedData[subjectName]!['total'] += 1;
+            }
+
+            // 2. حساب المتوسطات لكل مادة وتجهيزها للواجهة
+            List<Map<String, dynamic>> dynamicSubjectList = [];
+            aggregatedData.forEach((name, stats) {
+              int count = stats['total'];
+              double watchProgress = stats['watchCount'] / count;
+              double quizScore = stats['quizSum'] / count;
               double subjectScore = _calculateSubjectPerformance(watchProgress, quizScore);
+
               totalOverallScore += subjectScore;
-
-              addedSubjects.add(subjectName);
-
               dynamicSubjectList.add({
-                'subject': subjectName,
+                'subject': name,
                 'watchProgress': watchProgress,
                 'quizScore': quizScore,
                 'subjectScore': subjectScore,
               });
-            }
+            });
 
+            // 3. حساب النسبة الكلية للوحة العلوية
             double overallScore = dynamicSubjectList.isNotEmpty 
                 ? (totalOverallScore / dynamicSubjectList.length) 
                 : 0.0;
 
+            // ================== التصميم بالأسفل ثابت 100% ==================
             return Column(
               children: [
                 Container(
@@ -125,13 +138,13 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
                         children: [
                           SizedBox(
                             width: 110, height: 110,
-                            child: CircularProgressIndicator(value: overallScore, strokeWidth: 10, backgroundColor: Colors.white12, color: const Color(0xFFE6A100), strokeCap: StrokeCap.round),
+                            child: CircularProgressIndicator(value: overallScore > 0 ? overallScore : 0.02, strokeWidth: 10, backgroundColor: Colors.white12, color: const Color(0xFFE6A100), strokeCap: StrokeCap.round),
                           ),
                           Text('${(overallScore * 100).toStringAsFixed(0)}%', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 28, fontWeight: FontWeight.w900, color: Colors.white)),
                         ],
                       ),
                       const SizedBox(height: 16),
-                      Text(overallScore > 0.5 ? 'مستوى استيعابك العام ممتاز يا بطل! 🏆' : 'تابع المذاكرة بجد لتطوير أدائك! 🎯', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.white70)),
+                      Text(overallScore > 0.5 ? 'مستوى استيعابك العام ممتاز يا بطل! 🏆' : 'تابع المذاكرة بجد لتطوير أدائك! 🎯', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.white70)),
                     ],
                   ),
                 ),

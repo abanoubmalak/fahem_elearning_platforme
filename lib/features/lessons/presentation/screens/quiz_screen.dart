@@ -1,12 +1,13 @@
 // lib/features/lessons/screens/quiz_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:fahem/core/constants/colors.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 class QuizScreen extends StatefulWidget {
   final String lessonTitle;
   final List<dynamic> questions; 
-  final String subjectId; // 👈 استقبال المعرفات
+  final String subjectId; 
   final String studentTerm;
 
   const QuizScreen({
@@ -26,52 +27,36 @@ class _QuizScreenState extends State<QuizScreen> {
   int? _selectedAnswerIndex;
   int _score = 0;
 
+  // 💎 التعديل المنطقي: ضمان تطابق البيانات المحفوظة مع بيانات المنهج
   void _updateLessonProgressInFirebase({
     required int studentScore, 
     required int totalQuestions, 
     required String currentLessonTitle,
   }) async {
     try {
-      // 👈 تم تعديل المسار ليكون ديناميكي بناءً على المادة والترم لضمان الحفظ المظبوط
-      // 👈 الإصلاح: الـ document ID الحقيقي في Firestore شكله "sci_الترم الثاني"
-      // (subjectId الأول وبعده term)، لكن الكود كان بيركبه بالعكس "الترم الثاني_sci"
-      // فمكنش يلاقي الدوكيومنت أبداً، وكان يرجع (return) بصمت من غير ما يحفظ أي درجة
-      // أو يعلّم الدرس كـ "مكتمل" - وده سبب إن نتيجة الكويز ونسبة الفيديوهات
-      // في شاشة الأداء مكانت بتتحدث.
-      final documentRef = FirebaseFirestore.instance.collection('subjects_content').doc('${widget.subjectId}_${widget.studentTerm}');
-      
-      final docSnapshot = await documentRef.get();
-      if (!docSnapshot.exists) {
-        debugPrint('⚠️ لم يتم العثور على دوكيومنت: ${documentRef.path}');
-        return;
-      }
-
-      final data = docSnapshot.data() as Map<String, dynamic>;
-      final List<dynamic> units = data['units'] ?? [];
-
-      bool updated = false;
+      final String studentId = FirebaseAuth.instance.currentUser?.uid ?? '';
+      if (studentId.isEmpty) return;
 
       double calculatedQuizScore = totalQuestions > 0 ? (studentScore / totalQuestions) : 0.0;
 
-      for (var unit in units) {
-        final List<dynamic> lessons = unit['lessons'] ?? [];
-        for (var lesson in lessons) {
-          if (lesson['title'] == currentLessonTitle) {
-            lesson['isCompleted'] = true; 
-            lesson['quizScore'] = calculatedQuizScore; // 👈 ستقوم بإعادة كتابة النتيجة (Overwriting) في كل محاولة
-            updated = true;
-            break;
-          }
-        }
-        if (updated) break;
-      }
+      // الحفظ في جدول student_progress مع توحيد المعرفات
+      // ملاحظة: الـ lessonTitle هنا يجب أن يطابق تماماً الـ title في subjects_content
+      await FirebaseFirestore.instance
+          .collection('student_progress')
+          .doc('${studentId}_${widget.subjectId}_${currentLessonTitle.replaceAll(" ", "_")}')
+          .set({
+        'studentId': studentId,
+        'subjectId': widget.subjectId,
+        'lessonTitle': currentLessonTitle, // هذا هو المفتاح للربط مع Cubit
+        'isVideoWatched': true,
+        'quizScore': calculatedQuizScore * 10, 
+        'isCompleted': true, // 👈 القيمة التي يعتمد عليها الـ Cubit لإظهار علامة الإكمال
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
-      if (updated) {
-        await documentRef.update({'units': units});
-        debugPrint('🎯 تم بنجاح حفظ حالة المشاهدة ودرجة الاختبار ($calculatedQuizScore) في Firestore!');
-      }
+      debugPrint('🎯 تم حفظ التقدم بنجاح لدرس: $currentLessonTitle');
     } catch (e) {
-      debugPrint('❌ فشل تحديث السيرفر: $e');
+      debugPrint('❌ فشل التحديث: $e');
     }
   }
 

@@ -8,19 +8,31 @@ class AuthService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // 👈 دالة تحديث كلمة المرور الجديدة في الفايرستور ليتم اعتمادها فوراً
-  Future<void> updatePasswordInFirestore(String email, String newPassword) async {
-    final query = await _firestore
-        .collection('users')
-        .where('email', isEqualTo: email.trim().toLowerCase())
-        .get();
+  Future<void> updatePasswordInFirestore(
+    String email,
+    String newPassword,
+) async {
 
-    if (query.docs.isNotEmpty) {
-      // تحديث حقل الـ password داخل مستند المستخدم الحركي
-      await _firestore.collection('users').doc(query.docs.first.id).update({
-        'password': newPassword.trim(),
-      });
-    }
+  final query = await _firestore
+      .collection('users')
+      .where('email',
+          isEqualTo: email.trim().toLowerCase())
+      .get();
+
+  if (query.docs.isEmpty) {
+    throw Exception('المستخدم غير موجود');
   }
+
+  await _firestore
+      .collection('users')
+      .doc(query.docs.first.id)
+      .update({
+    'password': newPassword.trim(),
+  });
+
+
+  // استدعاء Cloud Function لتغيير Firebase Auth
+}
 
   // فحص وجود الحساب
   Future<bool> isEmailRegistered(String email) async {
