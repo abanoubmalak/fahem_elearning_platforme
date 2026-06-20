@@ -26,9 +26,6 @@ class AuthCubit extends Cubit<AuthState> {
     tempPassword = password;
   }
 
- // lib/features/auth/presentation/cubit/auth_cubit.dart
-
-  // دالة إتمام التسجيل وتوليد الـ OTP بعد إدخال الـ Role والبيانات الدراسية
   // دالة إتمام التسجيل وتوليد الـ OTP بعد إدخال الـ Role والبيانات الدراسية
   Future<void> completeRegistration({required String role, String? grade, String? term}) async {
     emit(AuthLoading());
@@ -50,7 +47,6 @@ class AuthCubit extends Cubit<AuthState> {
       ).timeout(const Duration(seconds: 8)); 
 
       if (user != null) {
-        // 💎 2. التعديل السحري: إضافة بيانات الطالب أو ولي الأمر في جداولهم المخصصة فوراً
         final firestore = FirebaseFirestore.instance;
         
         if (role == 'student') {
@@ -96,13 +92,53 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // التحقق من كود الـ OTP لحساب جديد
+  // 💎 تحديث منطق التحقق من كود الـ OTP لحساب جديد والتوجيه الذكي الموحد 💎
   Future<void> verifyOTP(String uid, String enteredCode) async {
     emit(AuthLoading());
     try {
+      // 1. فحص صحة الكود عبر السيرفر الخاص بك
       bool isCorrect = await _authService.verifyUserOTP(uid, enteredCode);
+      
       if (isCorrect) {
-        emit(AuthSuccess());
+        final FirebaseFirestore firestore = FirebaseFirestore.instance;
+
+        // 2. جلب مستند المستخدم الأساسي لمعرفة الـ role الفعلي سحابياً
+        DocumentSnapshot userDoc = await firestore.collection('users').doc(uid).get();
+        if (!userDoc.exists) {
+          emit(AuthFailure('بيانات الحساب غير موجودة بقاعدة البيانات ❌'));
+          return;
+        }
+
+        final userData = userDoc.data() as Map<String, dynamic>;
+        final String userRole = userData['role'] ?? 'student'; // استخراج الدور الحقيقي الحركي
+
+        // 3. تحديث تزامني موحد لحالة التفعيل (Activation) لمنع أي تضارب بين الحقول والتعارض البصري
+        WriteBatch batch = firestore.batch();
+
+        // تحديث جدول الـ users الموحد (دعم الحقلين معاً لتأمين الاستقرار البصري)
+        batch.update(firestore.collection('users').doc(uid), {
+          'is_active': true,
+          'isActive': true,
+        });
+
+        // تحديث الجدول الفرعي المخصص حسب الصلاحية الفعلية
+        if (userRole == 'parent') {
+          batch.update(firestore.collection('parents').doc(uid), {
+            'isActive': true,
+            'is_active': true,
+          });
+        } else if (userRole == 'student') {
+          batch.update(firestore.collection('students').doc(uid), {
+            'isActive': true,
+            'is_active': true,
+          });
+        }
+
+        // إتمام الحفظ السحابي دفعة واحدة بنظام الـ Batch
+        await batch.commit();
+
+        // 4. بث حالة النجاح مع تمرير الـ role الحقيقي للتوجيه السليم فوراً
+        emit(AuthSuccess(role: userRole));
       } else {
         emit(AuthFailure('كود التحقق الرقمي الذي أدخلته غير صحيح ❌'));
       }
@@ -122,7 +158,7 @@ class AuthCubit extends Cubit<AuthState> {
         emit(AuthFailure('تعذر جلب صلاحيات المستخدم من الخادم ⚠️'));
       }
     } catch (e) { 
-      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); // منع تسريب invalid-credential حياً
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); 
     }
   }
 
@@ -132,17 +168,14 @@ class AuthCubit extends Cubit<AuthState> {
     try {
       print('=== [AuthCubit] بدء الفحص الاستباقي للبريد: $email ===');
       
-      // 1. الفحص الصارم في الفايرستور
       bool exists = await _authService.isEmailRegistered(email);
-      
       if (!exists) {
         emit(AuthFailure('هذا البريد الإلكتروني غير مسجل لدينا في المنظومة ❌'));
         return;
       }
 
-      // 2. إذا نجح الفحص نولد كود رباعي متناسق مع شاشتك الجديدة
       tempForgotEmail = email.trim().toLowerCase();
-      tempForgotOtp = (1000 + Random().nextInt(9000)).toString(); // 👈 توليد 4 أرقام بدقة
+      tempForgotOtp = (1000 + Random().nextInt(9000)).toString(); // توليد 4 أرقام بدقة
 
       bool isEmailSent = await _emailService.sendOTPEmail(
         targetEmail: tempForgotEmail!,
@@ -168,7 +201,7 @@ class AuthCubit extends Cubit<AuthState> {
     if (enteredCode == tempForgotOtp) {
       emit(AuthForgotOTPVerified());
     } else {
-      emit(AuthFailure('كود التحقق المكون من 4 أرقام غير صحيح ❌')); // 👈 تم التحديث لـ 4 أرقام
+      emit(AuthFailure('كود التحقق المكون من 4 أرقام غير صحيح ❌')); 
     }
   }
 
@@ -182,7 +215,6 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       print('=== [AuthCubit 🔐] جاري استدعاء السيرفر لتحديث كلمة المرور للإيميل: $tempForgotEmail ===');
-      
       await _authService.updatePasswordInFirestore(tempForgotEmail!, newPassword);
       
       print('=== [AuthCubit 🎉] تم تحديث كلمة المرور بنجاح في قاعدة البيانات ===');
@@ -192,11 +224,10 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // ==================== 🛠️ الدالة المركزية المحدثة لترجمة وتوطين الأخطاء ====================
+  // الدالة المركزية لترجمة وتوطين الأخطاء
   String _mapExceptionToFriendlyMessage(Object e) {
     final errorStr = e.toString().toLowerCase();
     
-    // فحص شامل ومرن لكافة أكواد أخطاء الهوية وباسوردات التحقق المدمجة
     if (errorStr.contains('invalid-credential') || 
         errorStr.contains('wrong-password') || 
         errorStr.contains('user-not-found')) {
@@ -221,9 +252,7 @@ class AuthCubit extends Cubit<AuthState> {
     return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.';
   }
 
-
-
-// ================= 4. دالة نسيان كلمة المرور (الطريقة الرسمية لفايربيز) =================
+  // دالة نسيان كلمة المرور (الطريقة الرسمية لفايربيز)
   Future<void> sendPasswordResetLink(String email) async {
     emit(AuthLoading());
     try {
@@ -232,16 +261,10 @@ class AuthCubit extends Cubit<AuthState> {
         return;
       }
       
-      // الدالة الرسمية من فايربيز التي ترسل رابط تغيير الباسورد للإيميل
       await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
-      
-      // إرسال حالة النجاح للواجهة
       emit(AuthResetPasswordSuccess()); 
-      
     } catch (e) {
       emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
     }
   }
-
-
 }

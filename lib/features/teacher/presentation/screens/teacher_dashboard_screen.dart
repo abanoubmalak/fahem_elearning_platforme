@@ -1,11 +1,10 @@
 // lib/features/teacher/presentation/screens/tabs/teacher_subjects_tab.dart
 import 'package:fahem/core/constants/colors.dart';
-import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/teacher/presentation/screens/manage_sections/teacher_units_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/teacher_profile_screen.dart'; 
-import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart'; // 👈 استيراد الكوبيت
+import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart'; 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // 👈 استيراد البلوك
+import 'package:flutter_bloc/flutter_bloc.dart'; 
 
 class TeacherSubjectsTab extends StatefulWidget {
   const TeacherSubjectsTab({super.key});
@@ -19,7 +18,6 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
   Widget build(BuildContext context) {
     final double headerHeight = MediaQuery.of(context).size.height * 0.22;
 
-    // 👈 تغليف الشاشة بالـ BlocBuilder لقراءة البيانات الحية
     return BlocBuilder<TeacherCubit, TeacherState>(
       builder: (context, state) {
         if (state is TeacherLoading || state is TeacherInitial) {
@@ -27,7 +25,7 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
         }
         
         if (state is TeacherError) {
-          return Center(child: Text(state.message, style: const TextStyle(fontFamily: 'Cairo', color: Colors.redAccent)));
+          return Center(child: Text(state.message, style: const TextStyle(fontFamily: 'Cairo', color: Colors.redAccent, fontWeight: FontWeight.bold)));
         }
 
         if (state is TeacherLoaded) {
@@ -44,13 +42,18 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                 children: [
                   Positioned.fill(
                     child: assignedCourses.isEmpty
-                        ? const Center(child: Text('لم يتم إسناد أي مواد لك حتى الآن.', style: TextStyle(fontFamily: 'Cairo')))
+                        ? const Center(child: Text('لم يتم إسناد أي مواد لك حتى الآن.', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.grey)))
                         : ListView.builder(
                             physics: const BouncingScrollPhysics(),
                             padding: EdgeInsets.fromLTRB(20, headerHeight + 20, 20, 100),
                             itemCount: assignedCourses.length,
                             itemBuilder: (context, index) {
-                              final course = assignedCourses[index];
+                              final course = assignedCourses[index] as Map<String, dynamic>;
+                              
+                              // 💎 قراءة قيم المادة والترم حركياً وسحابياً من الداتابيز لمنع الـ Hardcoding
+                              final String currentSubjectId = course['subject'] ?? 'sci';
+                              final String currentTerm = course['term'] ?? 'الترم الثاني';
+
                               return Container(
                                 margin: const EdgeInsets.only(bottom: 16),
                                 decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
@@ -58,20 +61,20 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                                   color: Colors.transparent,
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(22),
-                                    // داخل كارت المادة بداخل الـ ListView.builder:
-                                        onTap: () {
-                                          Navigator.pushNamed(
-                                            context, 
-                                            Routes.TeacherUnitsScreen,
-                                            // 👈 تأكد من كتابة هذا الجزء لإرسال البيانات للشاشة المستقبلة حياً
-                                            arguments: {
-                                              'stageName': course['stage'],
-                                              'subjectId': 'sci', // الـ ID الخاص بالمادة
-                                              'term': 'الترم الثاني',
-                                            },
-                                          );
-                                        },
-                                                                            child: Padding(
+                                    onTap: () {
+                                      // 💎 التوجيه المباشر المستقر هندسياً وتغذية شاشة الوحدات حياً 💎
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => TeacherUnitsScreen(
+                                            stageName: course['stage'] ?? 'المرحلة الدراسية',
+                                            subjectId: currentSubjectId, 
+                                            term: currentTerm,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
                                       padding: const EdgeInsets.all(20.0),
                                       child: Column(
                                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -80,19 +83,19 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                                             children: [
                                               Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFEDF7F7), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.menu_book_rounded, color: Color(0xFF005F61), size: 24)),
                                               const SizedBox(width: 14),
-                                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(course['stage'] ?? 'مرحلة مجهولة', style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain)), const SizedBox(height: 2), Text('منهج التخصص المعتمد', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey[500]))])),
+                                              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(course['stage'] ?? 'مرحلة مجهولة', style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain)), const SizedBox(height: 2), Text('منهج التخصص المعتمد سحابياً', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey[500]))])),
                                               const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 16),
                                             ],
                                           ),
-                                          const Padding(padding: EdgeInsets.symmetric(vertical: 14.0), child: Divider(color: Color(0xFFF1F5F9), thickness: 1)),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                            children: [
-                                              _buildMiniStat(Icons.play_circle_fill_rounded, '${course['videos'] ?? 0} فيديو'),
-                                              _buildMiniStat(Icons.picture_as_pdf_rounded, '${course['pdfs'] ?? 0} ملخص'),
-                                              _buildMiniStat(Icons.assignment_rounded, '${course['quizzes'] ?? 0} اختبار', color: const Color(0xFFE6A100)),
-                                            ],
-                                          ),
+                                          // const Padding(padding: EdgeInsets.symmetric(vertical: 14.0), child: Divider(color: Color(0xFFF1F5F9), thickness: 1)),
+                                          // Row(
+                                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          //   children: [
+                                          //     _buildMiniStat(Icons.play_circle_fill_rounded, '${course['videos'] ?? 0} فيديو'),
+                                          //     _buildMiniStat(Icons.article_rounded, '${course['pdfs'] ?? 0} ملخص'), // 👈 أيقونة منسقة مع العناصر الثلاثة المحددة بدقة
+                                          //     _buildMiniStat(Icons.assignment_rounded, '${course['quizzes'] ?? 0} اختبار', color: const Color(0xFFE6A100)),
+                                          //   ],
+                                          // ),
                                         ],
                                       ),
                                     ),
@@ -121,7 +124,7 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  Expanded(child: Text('مرحباً، $teacherName 👋', style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                  Expanded(child: Text('مرحباً، أ/ $teacherName ', style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white), maxLines: 1, overflow: TextOverflow.ellipsis)),
                                   IconButton(
                                     icon: const Icon(Icons.account_circle_outlined, color: Colors.white, size: 28),
                                     onPressed: () => Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (context) => const TeacherProfileScreen())),

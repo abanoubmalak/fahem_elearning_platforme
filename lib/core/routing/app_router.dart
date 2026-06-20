@@ -13,7 +13,6 @@ import 'package:fahem/features/admin/presentation/screens/parent_details_screen.
 import 'package:fahem/features/admin/presentation/screens/student_details_screen.dart';
 import 'package:fahem/features/admin/presentation/screens/teacher_details_screen.dart';
 
-
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart'; 
 import 'package:fahem/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:fahem/features/auth/presentation/screens/otp_verification_screen.dart';
@@ -73,10 +72,6 @@ class AppRouter {
   };
 
   Route? generateRoute(RouteSettings settings) {
-    // 👈 الإصلاح: كان الكود يحوّل (cast) أي arguments بالقوة لـ Map، فلو الراوت
-    // مرسل لها arguments من نوع تاني (زي StudentCubit في ProfileScreen) كان
-    // التطبيق يكره (Crash) فوراً قبل ما يدخل أصلاً على الـ switch. دلوقتي بنفحص
-    // النوع الأول، ولو مش Map نسيبه null بدل ما نعمل throw.
     final args = settings.arguments is Map<String, dynamic>
         ? settings.arguments as Map<String, dynamic>
         : null;
@@ -119,13 +114,14 @@ class AppRouter {
           ),
         );
 
-     case Routes.MainWrapper:
- return MaterialPageRoute(
-   builder: (_) => BlocProvider(
-     create: (context) => StudentCubit()..loadStudentDashboard(),
-     child: const MainWrapper(),
-   ),
- );
+      case Routes.MainWrapper:
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider(
+            create: (context) => StudentCubit()..loadStudentDashboard(),
+            child: const MainWrapper(),
+          ),
+        );
+        
       case Routes.VideoPlayerScreen:
         return MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(
@@ -156,8 +152,6 @@ class AppRouter {
         );
 
       case Routes.ProfileScreen: 
-        // 👈 فحص أمان إضافي: لو حصل واتنقل لشاشة البروفيل من غير ما يبعت StudentCubit
-        // (أو بعت نوع غلط)، منعمل Cubit جديد ونحمل الداشبورد فيه بدل ما نكره التطبيق.
         final studentCubit = settings.arguments is StudentCubit
             ? settings.arguments as StudentCubit
             : (StudentCubit()..loadStudentDashboard());
@@ -235,10 +229,13 @@ class AppRouter {
         ));
 
       case Routes.ManageTextSummaryScreen:
-        return MaterialPageRoute(builder: (_)=> ManageTextSummaryScreen(
-          lessonName: args?['lessonName'] as String? ?? '',
-          initialSummary: args?['initialSummary'] as String?,
-        ));
+        final localArgs = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => ManageTextSummaryScreen(
+            lessonName: localArgs['lessonName'],
+            initialSummaries: localArgs['initialSummaries'], 
+          ),
+        );
 
       case Routes.ManageQuizContentScreen:
         return MaterialPageRoute(builder: (_)=> ManageQuizContentScreen(
@@ -249,10 +246,11 @@ class AppRouter {
           initialQuestions: args?['initialQuestions'] as List<dynamic>?,
         ));
 
+      // 💎 تم تعديل هذا الجزء لحل مشكلة الـ undefined_named_parameter 💎
       case Routes.TeacherQuizEditorScreen:
         return MaterialPageRoute(builder: (_)=> TeacherQuizEditorScreen(
           lessonName: args?['lessonName'] as String? ?? '',
-          initialQuestions: args?['initialQuestions'] as List<dynamic>?,
+          initialQuiz: args?['initialQuestions'] as List<dynamic>?, // استخدام initialQuiz هنا
         ));
 
       case Routes.LessonContentHubScreen:
@@ -301,9 +299,6 @@ class AppRouter {
       case Routes.TeacherFinancialScreen:
         return MaterialPageRoute(builder: (_)=> const TeacherFinancialScreen());
 
-      // ─────────────────────────────────────────────
-      // شاشات الإدارة المغلفة بـ AdminCubit
-      // ─────────────────────────────────────────────
       case Routes.AdminMainWrapper:
         return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminMainWrapper()));
 
@@ -334,7 +329,6 @@ class AppRouter {
       case Routes.AdminTreasuryScreen:
         return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
 
-      // 👈 تم إضافة مسارات أولياء الأمور هنا بشكل مؤمن
       case Routes.AdminParentsManagementScreen:
         return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminParentsManagementScreen()));
 

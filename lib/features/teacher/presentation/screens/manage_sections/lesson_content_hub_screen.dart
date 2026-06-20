@@ -1,12 +1,11 @@
-// lib/features/teacher/presentation/screens/manage_sections/lesson_content_hub_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/cubit/teacher_academic_cubit.dart';
+import 'package:fahem/features/teacher/presentation/screens/manage_sections/manage_quiz_content_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 import 'manage_media_content_screen.dart';
 import 'manage_text_summary_screen.dart';
-import 'manage_quiz_content_screen.dart';
 
 class LessonContentHubScreen extends StatefulWidget {
   final String lessonName;
@@ -16,7 +15,7 @@ class LessonContentHubScreen extends StatefulWidget {
   final String term;
 
   const LessonContentHubScreen({
-    super.key, 
+    super.key,
     required this.lessonName,
     required this.unitName,
     required this.stageName,
@@ -35,26 +34,29 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
 
     return BlocBuilder<TeacherAcademicCubit, TeacherAcademicState>(
       builder: (context, state) {
+        // تعريف المتغيرات في النطاق الصحيح لتكون مرئية لكل شيء
         bool hasVideo = false;
         bool hasSummary = false;
         bool hasQuiz = false;
         String? videoUrl;
-        String? summaryText;
+        List<dynamic> summariesList = [];
         List<dynamic>? questionsList;
 
         if (state is AcademicLoaded) {
-          final unit = state.units.firstWhere((u) => u['title'] == widget.unitName, orElse: () => {});
-          final lessons = unit['lessons'] ?? [];
+          final unit = state.units.firstWhere((u) => u['title'] == widget.unitName, orElse: () => {'lessons': []});
+          final lessons = (unit['lessons'] as List<dynamic>?) ?? [];
           final lesson = lessons.firstWhere((l) => l['title'] == widget.lessonName, orElse: () => {});
 
-          videoUrl = lesson['videoUrl'];
-          final summariesList = lesson['summaries'] as List<dynamic>? ?? [];
-          summaryText = summariesList.isNotEmpty ? summariesList.first.toString() : null;
-          questionsList = lesson['questions'];
+          if (lesson.isNotEmpty) {
+            videoUrl = lesson['videoUrl'];
+            summariesList = (lesson['summaries'] as List<dynamic>?) ?? [];
+            //  الأسلوب الصحيح بعد التعديل:
+questionsList = lesson['quiz'] as List<dynamic>?; // 👈 التغيير هنا ليطابق حقل الـ Cubit والفايربيز
 
-          hasVideo = (videoUrl ?? '').toString().isNotEmpty;
-          hasSummary = (summaryText ?? '').toString().isNotEmpty;
-          hasQuiz = (questionsList ?? []).isNotEmpty;
+            hasVideo = (videoUrl ?? '').toString().isNotEmpty;
+            hasSummary = summariesList.isNotEmpty;
+            hasQuiz = (questionsList ?? []).isNotEmpty;
+          }
         }
 
         return Scaffold(
@@ -73,24 +75,23 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                         const Text('اختر القسم المطلوب إدارته:', style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Colors.grey)),
                         const SizedBox(height: 16),
 
-                        // 1️⃣ كارت إدارة الفيديو
+                        // كارت الفيديو
                         _buildHubCard(
                           title: 'فيديو الشرح', subtitle: 'رفع، تعديل، أو حذف فيديو الدرس',
                           icon: Icons.play_circle_fill_rounded, iconBgColor: const Color(0xFFEDF7F7), iconColor: const Color(0xFF005F61),
                           isAdded: hasVideo,
                           onTap: () {
-                            // 👈 استخراج الكوبيت مسبقاً لتفادي تحذير الـ Async Gap
                             final academicCubit = BlocProvider.of<TeacherAcademicCubit>(context);
                             Navigator.push(context, MaterialPageRoute(
                               builder: (_) => ManageMediaContentScreen(
-                                lessonName: widget.lessonName, 
-                                initialContent: videoUrl
+                                lessonName: widget.lessonName,
+                                initialContent: videoUrl,
                               ),
                             )).then((newVideoUrl) {
                               if (state is AcademicLoaded) {
                                 academicCubit.updateLessonContent(
                                   subjectId: widget.subjectId, term: widget.term, unitTitle: widget.unitName, lessonTitle: widget.lessonName,
-                                  contentType: 'video', contentData: newVideoUrl ?? '', currentUnits: state.units,
+                                  contentType: 'video', contentData: newVideoUrl ?? '',
                                 );
                               }
                             });
@@ -98,7 +99,7 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // 2️⃣ كارت إدارة الملخص
+                        // كارت الملخص
                         _buildHubCard(
                           title: 'الملخص والمذكرة', subtitle: 'كتابة وتحديث الملخص الأكاديمي للدرس',
                           icon: Icons.article_rounded, iconBgColor: const Color(0xFFE8F8F5), iconColor: const Color(0xFF27AE60),
@@ -107,15 +108,14 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                             final academicCubit = BlocProvider.of<TeacherAcademicCubit>(context);
                             Navigator.push(context, MaterialPageRoute(
                               builder: (_) => ManageTextSummaryScreen(
-                                lessonName: widget.lessonName, 
-                                initialSummary: summaryText
+                                lessonName: widget.lessonName,
+                                initialSummaries: summariesList,
                               ),
-                            )).then((newSummary) {
-                              if (state is AcademicLoaded) {
-                                final data = newSummary == null || newSummary.toString().isEmpty ? [] : [newSummary];
+                            )).then((newSummaries) {
+                              if (newSummaries != null && state is AcademicLoaded) {
                                 academicCubit.updateLessonContent(
                                   subjectId: widget.subjectId, term: widget.term, unitTitle: widget.unitName, lessonTitle: widget.lessonName,
-                                  contentType: 'summary', contentData: data, currentUnits: state.units,
+                                  contentType: 'summary', contentData: newSummaries,
                                 );
                               }
                             });
@@ -123,7 +123,7 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                         ),
                         const SizedBox(height: 16),
 
-                        // 3️⃣ كارت إدارة الكويز (تم تمرير المعاملات الإجبارية سطر 127 وتأمين الـ Async Gap)
+                        // كارت الكويز
                         _buildHubCard(
                           title: 'اختبار الاستيعاب (MCQ)', subtitle: 'إضافة وتعديل أسئلة واختيارات الامتحان',
                           icon: Icons.assignment_turned_in_rounded, iconBgColor: const Color(0xFFFEF6E5), iconColor: const Color(0xFFE6A100),
@@ -131,18 +131,21 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                           onTap: () {
                             final academicCubit = BlocProvider.of<TeacherAcademicCubit>(context);
                             Navigator.push(context, MaterialPageRoute(
-                              builder: (_) => ManageQuizContentScreen(
-                                lessonName: widget.lessonName, 
-                                unitName: widget.unitName,     // 👈 إصلاح خطأ سطر 127 ممرر 1
-                                subjectId: widget.subjectId,   // 👈 إصلاح خطأ سطر 127 ممرر 2
-                                term: widget.term,             // 👈 BC إصلاح خطأ سطر 127 ممرر 3
-                                initialQuestions: questionsList,
+                              builder: (modalContext) => BlocProvider.value(
+                                value: academicCubit,
+                                child: ManageQuizContentScreen(
+                                  lessonName: widget.lessonName,
+                                  unitName: widget.unitName,
+                                  subjectId: widget.subjectId,
+                                  term: widget.term,
+                                  initialQuestions: questionsList,
+                                ),
                               ),
                             )).then((newQuestions) {
                               if (newQuestions != null && state is AcademicLoaded) {
                                 academicCubit.updateLessonContent(
                                   subjectId: widget.subjectId, term: widget.term, unitTitle: widget.unitName, lessonTitle: widget.lessonName,
-                                  contentType: 'quiz', contentData: newQuestions, currentUnits: state.units,
+                                  contentType: 'quiz', contentData: newQuestions,
                                 );
                               }
                             });
@@ -152,7 +155,7 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                     ),
                   ),
                 ),
-
+                // الهيدر
                 Positioned(
                   top: 0, left: 0, right: 0, height: headerHeight,
                   child: Container(
@@ -165,7 +168,7 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
                           children: [
                             IconButton(
                               icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
-                              onPressed: () => Navigator.pop(context), 
+                              onPressed: () => Navigator.pop(context),
                             ),
                             const SizedBox(width: 8),
                             Expanded(
@@ -191,7 +194,7 @@ class _LessonContentHubScreenState extends State<LessonContentHubScreen> {
           ),
         );
       },
-    ); 
+    );
   }
 
   Widget _buildHubCard({required String title, required String subtitle, required IconData icon, required Color iconBgColor, required Color iconColor, required bool isAdded, required VoidCallback onTap}) {

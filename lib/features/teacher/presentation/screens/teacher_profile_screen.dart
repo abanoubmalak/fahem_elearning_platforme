@@ -1,6 +1,9 @@
 // lib/features/teacher/presentation/screens/teacher_profile_screen.dart
 import 'package:fahem/core/constants/colors.dart';
+import 'package:fahem/core/routing/routes.dart'; // 👈 استيراد راوتر التطبيق بالتوازي
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // 👈 استيراد الأوث للتعامل مع الحساب
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور لجلب وتحديث البيانات
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -12,6 +15,7 @@ class TeacherProfileScreen extends StatefulWidget {
 class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
+  // متحكمات الحقول الموصولة بالداتابيز حياً
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
@@ -28,14 +32,42 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: 'أبانوب ملاك');
-    _emailController = TextEditingController(text: 'abanoub.math@fahem.com');
-    _specialtyController = TextEditingController(text: 'الرياضيات (معتمد من الإدارة)');
-    _phoneController = TextEditingController(text: '01234567890');
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
+    _specialtyController = TextEditingController();
+    _phoneController = TextEditingController();
     
     _oldPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+
+    _loadTeacherProfileData(); // 👈 جلب بيانات تخصص وتواصل المعلم حياً من الفايربيز
+  }
+
+  // 💎 دالة جلب وقراءة بيانات المعلم الحالية من قاعدة البيانات السحابية حياً
+  void _loadTeacherProfileData() async {
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        _emailController.text = currentUser.email ?? '';
+        
+        DocumentSnapshot teacherDoc = await FirebaseFirestore.instance
+            .collection('teachers')
+            .doc(currentUser.uid)
+            .get();
+
+        if (teacherDoc.exists && teacherDoc.data() != null && mounted) {
+          final data = teacherDoc.data() as Map<String, dynamic>;
+          setState(() {
+            _nameController.text = data['name'] ?? 'معلم فاهم';
+            _specialtyController.text = data['specialty'] ?? 'غير محدد';
+            _phoneController.text = data['phone'] ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في تحميل ملف المعلم: $e');
+    }
   }
 
   @override
@@ -50,14 +82,62 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfileData() {
-    if (_formKey.currentState!.validate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('تم تحديث بيانات الأمان والتواصل بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')),
-          backgroundColor: AppColors.primary,
-        ),
-      );
+  // 💎 دالة حفظ تعديلات التواصل والأمان وتوطين الأخطاء والتوجيه المباشر
+  void _saveProfileData() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    String oldPass = _oldPasswordController.text;
+    String newPass = _newPasswordController.text;
+
+    // التحقق الاستباقي لو أراد المعلم تغيير الباسورد
+    if (oldPass.isNotEmpty || newPass.isNotEmpty) {
+      if (oldPass.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال كلمة المرور الحالية أولاً.', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+        return;
+      }
+      if (newPass.isEmpty || newPass.length < 6) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف.', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+        return;
+      }
+    }
+
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      // 1. تحديث رقم الهاتف للتواصل المباشر في الفايرستور
+      await FirebaseFirestore.instance.collection('teachers').doc(currentUser.uid).update({
+        'phone': _phoneController.text.trim(),
+      });
+
+      // 2. تحديث الباسورد في الـ Authentication لو تم إدخاله
+      if (newPass.isNotEmpty && oldPass.isNotEmpty) {
+        AuthCredential credential = EmailAuthProvider.credential(email: currentUser.email!, password: oldPass);
+        await currentUser.reauthenticateWithCredential(credential); // إعادة المصادقة للتأكد من هويته
+        await currentUser.updatePassword(newPass.trim());
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم تحديث بيانات الأمان والتواصل بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)),
+        );
+
+        // ↩️ التوجيه التلقائي الفوري للشاشة الرئيسية للمعلم بعد التحديث المستقر
+        Navigator.pushNamedAndRemoveUntil(context, Routes.TeacherMainWrapper, (route) => false);
+      }
+    } on FirebaseAuthException catch (e) {
+      // 💎 التقاط وترجمة خطأ كلمة المرور الحالية لمنع الأكواد المزعجة أمام اللجنة
+      String friendlyMessage = 'حدث خطأ أثناء حفظ التعديلات الرقمية.';
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        friendlyMessage = 'كلمة المرور الحالية التي أدخلتها غير صحيحة ❌';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyMessage, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل الحفظ: $e', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+      }
     }
   }
 
@@ -67,9 +147,35 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     );
   }
 
+  // 💎 دالة تسجيل الخروج الرسمية وتطهير الجلسة
   void _logout() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('جاري تسجيل الخروج من حساب المعلم...', style: TextStyle(fontFamily: 'Cairo'))),
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: dialogContext(ctx),
+      ),
+    );
+  }
+
+  Widget dialogContext(BuildContext ctx) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: const Text('تسجيل الخروج', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+      content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من حساب المعلم؟', style: TextStyle(fontFamily: 'Cairo')),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey))),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(ctx);
+            await FirebaseAuth.instance.signOut(); // إنهاء الجلسة سحابياً
+            if (mounted) {
+              Navigator.pushNamedAndRemoveUntil(context, Routes.loginScreen, (route) => false);
+            }
+          },
+          child: const Text('خروج', style: TextStyle(fontFamily: 'Cairo', color: Colors.redAccent, fontWeight: FontWeight.bold)),
+        ),
+      ],
     );
   }
 
@@ -85,7 +191,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         child: Stack(
           children: [
             // ==================== 1. جسم الشاشة (في الخلفية أولاً) ====================
-            // 💎 نقلنا محتوى الشاشة ليكون أول عنصر في الـ Stack 💎
             Positioned.fill(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -93,7 +198,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
                   key: _formKey,
                   child: Column(
                     children: [
-                      SizedBox(height: headerHeight -20),
+                      SizedBox(height: headerHeight - 20),
 
                       Stack(
                         alignment: Alignment.bottomLeft,
@@ -249,19 +354,16 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
             ),
 
             // ==================== 2. البانر الفيروزي العلوي (في المقدمة آخراً) ====================
-            // 💎 نقلنا البانر ليكون آخر عنصر في الـ Stack ليطفو فوق المحتوى 💎
             Positioned(
-              top: 0, left: 0, right: 0, height: headerHeight-60,
+              top: 0, left: 0, right: 0, height: headerHeight - 60,
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topRight, end: Alignment.bottomLeft,
                     colors: [Color(0xFF005F61), Color(0xFF003D3F)],
                   ),
-                  //borderRadius: BorderRadius.only(bottomLeft: Radius.circular(35), bottomRight: Radius.circular(35)),
                 ),
                 child: SafeArea(
-                  bottom: false,
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 12.0),
                     child: Row(

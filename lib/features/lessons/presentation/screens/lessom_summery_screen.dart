@@ -1,10 +1,10 @@
-// lib/features/lessons/presentation/screens/lessom_summery_screen.dart
+// lib/features/lessons/presentation/screens/lesson_summary_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
 class LessonSummaryScreen extends StatelessWidget {
   final String lessonTitle;
-  final List<dynamic> summaries; // 👈 1. استقبال مصفوفة الملخصات
+  final List<dynamic> summaries;
 
   const LessonSummaryScreen({
     super.key,
@@ -53,7 +53,7 @@ class LessonSummaryScreen extends StatelessWidget {
               ),
             ),
 
-            // ── كارت عرض الملخصات الديناميكي ──
+            // ── الحاوية الرئيسية للملخصات ──
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -69,21 +69,44 @@ class LessonSummaryScreen extends StatelessWidget {
                         Text(lessonTitle, style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
                         const SizedBox(height: 20),
 
-                        // 👈 2. رسم الملخصات حياً من مصفوفة البيانات
-                        summaries.isEmpty 
-                        ? const Center(child: Text('لا توجد ملخصات لهذا الدرس حالياً.', style: TextStyle(fontFamily: 'Cairo')))
-                        : ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: summaries.length,
-                          itemBuilder: (context, index) {
-                            final summary = summaries[index];
-                            return _buildSummaryStructureCard(
-                              originalText: summary['originalText'] ?? '',
-                              summaryText: summary['summaryText'] ?? '',
-                            );
-                          },
-                        ),
+                        // ── مربع واحد يحتوي على جميع الملخصات ──
+                        summaries.isEmpty
+                            ? const Center(child: Text('لا توجد ملخصات لهذا الدرس حالياً.', style: TextStyle(fontFamily: 'Cairo')))
+                            : Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(18),
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(color: Colors.grey.shade100),
+                                  boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 15, offset: const Offset(0, 5))],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: List.generate(summaries.length, (index) {
+                                    final summary = summaries[index];
+                                    final bool isLast = index == summaries.length - 1;
+
+                                    return Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // النص الأصلي
+                                        Text(summary['originalText'] ?? '', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF005F61), height: 1.4)),
+                                        const SizedBox(height: 0),
+                                        // الشرح
+                                        Text(summary['summaryText'] ?? '', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: AppColors.textMain, height: 1.6)),
+                                        
+                                        // فاصل بين الملخصات (فقط إذا لم يكن العنصر الأخير)
+                                        if (!isLast)
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 0.0),
+                                            child: Divider(color: Color(0xFFEDF2F7), thickness: 1.5),
+                                          ),
+                                      ],
+                                    );
+                                  }),
+                                ),
+                              ),
                         const SizedBox(height: 60),
                       ],
                     ),
@@ -93,24 +116,6 @@ class LessonSummaryScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  // ويدجت الكروت الهيكلية
-  Widget _buildSummaryStructureCard({required String originalText, required String summaryText}) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade100), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 15, offset: const Offset(0, 5))]),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(originalText, style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF005F61), height: 1.4)),
-          const Padding(padding: EdgeInsets.symmetric(vertical: 12.0), child: Divider(color: Color(0xFFEDF2F7), thickness: 1.2)),
-          Text(summaryText, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: AppColors.textMain, height: 1.6)),
-        ],
       ),
     );
   }

@@ -26,54 +26,54 @@ class TeacherLessonsScreen extends StatefulWidget {
 
 class _TeacherLessonsScreenState extends State<TeacherLessonsScreen> {
 
-  void _openAddLessonBottomSheet(List<dynamic> currentUnits) {
-    final TextEditingController lessonController = TextEditingController();
+  // عدّل الدالة لتصبح هكذا (بدون تمرير currentUnits):
+// عدّل الدالة لتصبح هكذا (بدون تمرير currentUnits):
+void _openAddLessonBottomSheet() { // حذفنا المعامل هنا
+  final TextEditingController lessonController = TextEditingController();
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30))),
-      builder: (sheetContext) => Directionality(
-        textDirection: TextDirection.rtl,
-        child: Padding(
-          padding: EdgeInsets.fromLTRB(20, 25, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 25),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('إضافة درس جديد للوحدة', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black)),
-              const SizedBox(height: 18),
-              TextField(
-                controller: lessonController,
-                decoration: InputDecoration(hintText: 'مثال: الدرس الأول: التعبير الرمزي عن الدالة', hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12), filled: true, fillColor: const Color(0xFFF8FAFC), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)),
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(borderRadius: BorderRadius.only(topLeft: Radius.circular(30), topRight: Radius.circular(30))),
+    builder: (sheetContext) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(20, 25, 20, MediaQuery.of(sheetContext).viewInsets.bottom + 25),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('إضافة درس جديد للوحدة', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 18),
+            TextField(
+              controller: lessonController,
+              decoration: InputDecoration(hintText: 'مثال: الدرس الأول...', filled: true, fillColor: const Color(0xFFF8FAFC), border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none)),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity, height: 48,
+              child: ElevatedButton(
+                onPressed: () {
+                  if (lessonController.text.trim().isNotEmpty) {
+                    // لاحظ هنا: قمنا بحذف currentUnits من المعاملات
+                    BlocProvider.of<TeacherAcademicCubit>(context).addLesson(
+                      subjectId: widget.subjectId,
+                      term: widget.term,
+                      unitTitle: widget.unitName,
+                      lessonName: lessonController.text.trim(),
+                    );
+                    Navigator.pop(sheetContext);
+                  }
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
+                child: const Text('إضافة الدرس', style: TextStyle(color: Colors.white)),
               ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity, height: 48,
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (lessonController.text.trim().isNotEmpty) {
-                      BlocProvider.of<TeacherAcademicCubit>(context).addLesson(
-                        subjectId: widget.subjectId,
-                        term: widget.term,
-                        unitTitle: widget.unitName,
-                        lessonName: lessonController.text.trim(),
-                        currentUnits: currentUnits,
-                      );
-                      Navigator.pop(sheetContext);
-                    }
-                  },
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15))),
-                  child: const Text('إضافة الدرس حياً', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
-                ),
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
-    );
-  }
-
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     final double headerHeight = MediaQuery.of(context).size.height * 0.22;
@@ -92,11 +92,12 @@ class _TeacherLessonsScreenState extends State<TeacherLessonsScreen> {
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
           floatingActionButton: FloatingActionButton.extended(
-            onPressed: () => _openAddLessonBottomSheet(currentUnits),
-            backgroundColor: const Color(0xFFE6A100),
-            icon: const Icon(Icons.add_rounded, color: Colors.white),
-            label: const Text('إضافة درس جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
-          ),
+  // 💡 تم تفريغ القوسين هنا لأن الدالة لم تعد تأخذ معاملات
+  onPressed: () => _openAddLessonBottomSheet(), 
+  backgroundColor: const Color(0xFFE6A100),
+  icon: const Icon(Icons.add_rounded, color: Colors.white),
+  label: const Text('إضافة درس جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
+),
           body: Directionality(
             textDirection: TextDirection.rtl,
             child: Stack(

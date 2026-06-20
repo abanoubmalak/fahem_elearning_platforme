@@ -1,7 +1,11 @@
 // lib/features/parent/presentation/screens/parent_profile_screen.dart
+import 'package:fahem/core/routing/routes.dart'; 
 import 'package:fahem/features/parent/presentation/cubit/parent_cubit.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 
 class ParentProfileScreen extends StatefulWidget {
   const ParentProfileScreen({super.key});
@@ -24,11 +28,34 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: 'أبانوب ملاك (ولي الأمر)');
-    _emailController = TextEditingController(text: 'abanoub.parent@science.com');
+    _nameController = TextEditingController();
+    _emailController = TextEditingController();
     _oldPasswordController = TextEditingController();
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
+    _loadParentProfileData(); 
+  }
+
+  void _loadParentProfileData() async {
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        _emailController.text = currentUser.email ?? '';
+        
+        DocumentSnapshot parentDoc = await FirebaseFirestore.instance
+            .collection('parents')
+            .doc(currentUser.uid)
+            .get();
+
+        if (parentDoc.exists && parentDoc.data() != null && mounted) {
+          setState(() {
+            _nameController.text = parentDoc['name'] ?? '';
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في تحميل ملف ولي الأمر: $e');
+    }
   }
 
   @override
@@ -41,19 +68,108 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
     super.dispose();
   }
 
-  void _saveProfileData() {
-    if (_newPasswordController.text.isNotEmpty && _newPasswordController.text != _confirmPasswordController.text) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('خطأ: كلمة المرور غير متطابقة!', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+  // 💎 دالة حفظ التعديلات الذكية المحدثة لترجمة الأخطاء والتوجيه التلقائي
+  void _saveProfileData() async {
+    if (_nameController.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('خطأ: الاسم لا يمكن أن يكون فارغاً!', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent)
+      );
       return;
     }
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث بيانات ولي الأمر بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)));
+
+    String oldPass = _oldPasswordController.text;
+    String newPass = _newPasswordController.text;
+    String confPass = _confirmPasswordController.text;
+
+    if (oldPass.isNotEmpty || newPass.isNotEmpty || confPass.isNotEmpty) {
+      if (oldPass.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال كلمة المرور الحالية أولاً.', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+        return;
+      }
+      if (newPass.isEmpty || newPass.length < 6) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('كلمة المرور الجديدة يجب أن لا تقل عن 6 أحرف.', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+        return;
+      }
+      if (newPass != confPass) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('خطأ: كلمة المرور غير متطابقة!', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+        return;
+      }
+    }
+
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      // 1. تحديث الاسم في الفايرستور
+      await FirebaseFirestore.instance.collection('parents').doc(currentUser.uid).update({
+        'name': _nameController.text.trim(),
+      });
+
+      // 2. تحديث الباسورد في الـ Authentication لو تم إدخاله مع التقاط الأخطاء يدوياً
+      if (newPass.isNotEmpty && oldPass.isNotEmpty) {
+        AuthCredential credential = EmailAuthProvider.credential(email: currentUser.email!, password: oldPass);
+        await currentUser.reauthenticateWithCredential(credential);
+        await currentUser.updatePassword(newPass.trim());
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث بيانات ولي الأمر بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)));
+        _oldPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        context.read<ParentCubit>().loadParentDashboard(); 
+
+        // ↩️ التوجيه المباشر الفوري للشاشة الرئيسية لولي الأمر بعد التحديث المستقر
+        Navigator.pushNamedAndRemoveUntil(context, Routes.ParentWrapper, (route) => false);
+      }
+    } on FirebaseAuthException catch (e) {
+      // 💎 فحص وترجمة كود خطأ كلمة المرور الحالية غير الصحيحة
+      String friendlyMessage = 'حدث خطأ أثناء حفظ التعديلات الرقمية.';
+      if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
+        friendlyMessage = 'كلمة المرور الحالية التي أدخلتها غير صحيحة ❌';
+      }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(friendlyMessage, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('فشل الحفظ: $e', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+      }
+    }
+  }
+
+  void _logout() {
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('تسجيل الخروج', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          content: const Text('هل أنت متأكد أنك تريد تسجيل الخروج من الحساب؟', style: TextStyle(fontFamily: 'Cairo')),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey))),
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                await FirebaseAuth.instance.signOut();
+                if (mounted) {
+                  Navigator.pushNamedAndRemoveUntil(context, Routes.loginScreen, (route) => false);
+                }
+              },
+              child: const Text('خروج', style: TextStyle(fontFamily: 'Cairo', color: Colors.redAccent, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ParentCubit, ParentState>(
       builder: (context, state) {
-        final linkedChildrenCount = state.children.length; // 👈 قراءة حية من الـ Cubit
+        final linkedChildrenCount = state.children.length; 
 
         return Directionality(
           textDirection: TextDirection.rtl,
@@ -122,7 +238,7 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
                       children: [
                         SizedBox(width: double.infinity, height: 50, child: ElevatedButton(onPressed: _saveProfileData, style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0), child: const Text('حفظ التعديلات الشخصية', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)))),
                         const SizedBox(height: 16),
-                        SizedBox(width: double.infinity, height: 50, child: OutlinedButton.icon(onPressed: (){}, icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.redAccent), label: const Text('تسجيل الخروج', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.redAccent)), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
+                        SizedBox(width: double.infinity, height: 50, child: OutlinedButton.icon(onPressed: _logout, icon: const Icon(Icons.logout_rounded, size: 18, color: Colors.redAccent), label: const Text('تسجيل الخروج', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.redAccent)), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent, width: 1.2), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
                       ],
                     ),
                   ),
@@ -135,9 +251,6 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       },
     );
   }
-
-
-  
 
   Widget _buildSectionTitle(String title) {
     return Padding(padding: const EdgeInsets.symmetric(horizontal: 28.0), child: Align(alignment: Alignment.centerRight, child: Text(title, style: const TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.grey))));
@@ -161,7 +274,4 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       ),
     );
   }
-
-
-  
 }

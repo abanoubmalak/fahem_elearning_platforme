@@ -1,15 +1,14 @@
-// lib/features/teacher/presentation/screens/manage_sections/manage_text_summary_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
 class ManageTextSummaryScreen extends StatefulWidget {
   final String lessonName;
-  final String? initialSummary; 
+  final List<dynamic>? initialSummaries; 
 
   const ManageTextSummaryScreen({
     super.key,
     required this.lessonName,
-    this.initialSummary,
+    this.initialSummaries,
   });
 
   @override
@@ -17,127 +16,171 @@ class ManageTextSummaryScreen extends StatefulWidget {
 }
 
 class _ManageTextSummaryScreenState extends State<ManageTextSummaryScreen> {
-  late TextEditingController _summaryController;
-  final _formKey = GlobalKey<FormState>();
+  late List<Map<String, dynamic>> _summaries;
 
   @override
   void initState() {
     super.initState();
-    _summaryController = TextEditingController(text: widget.initialSummary ?? '');
-  }
-
-  @override
-  void dispose() {
-    _summaryController.dispose();
-    super.dispose();
-  }
-
-  void _saveSummary() {
-    if (_formKey.currentState!.validate()) {
-      final String newText = _summaryController.text.trim();
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حفظ وتحديث الملخص النصي بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.primary));
-      Navigator.pop(context, newText); 
+    _summaries = [];
+    if (widget.initialSummaries != null) {
+      for (var element in widget.initialSummaries!) {
+        if (element is Map) {
+          _summaries.add(Map<String, dynamic>.from(element));
+        } else {
+          _summaries.add({
+            'originalText': 'ملخص عام',
+            'summaryText': element.toString(),
+          });
+        }
+      }
     }
   }
 
-  void _deleteSummary() {
+  // دالة مساعدة لتصميم حقل الإدخال
+  InputDecoration _inputDecoration(String label) => InputDecoration(
+    labelText: label,
+    labelStyle: const TextStyle(fontFamily: 'Cairo'),
+    border: OutlineInputBorder(borderRadius: BorderRadius.circular(15)),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(15),
+      borderSide: const BorderSide(color: Color(0xFF005F61), width: 2),
+    ),
+  );
+
+  void _openSummaryDialog({int? index}) {
+    final TextEditingController originalController = TextEditingController(
+      text: index != null ? (_summaries[index]['originalText'] ?? '') : ''
+    );
+    final TextEditingController summaryController = TextEditingController(
+      text: index != null ? (_summaries[index]['summaryText'] ?? '') : ''
+    );
+
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Directionality(
-          textDirection: TextDirection.rtl,
-          child: AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-            title: const Row(children: [Icon(Icons.delete_forever_rounded, color: Colors.redAccent), SizedBox(width: 8), Text('حذف الملخص', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold))]),
-            content: const Text('هل أنت متأكد من حذف هذا الملخص نهائياً؟ سيتم إخفاؤه من شاشات الطلاب.', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.5)),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('تراجع', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontWeight: FontWeight.bold))),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); 
-                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم حذف الملخص النصي نهائياً', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
-                  Navigator.pop(context, null); 
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-                child: const Text('نعم، احذف', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text(index == null ? 'إضافة ملخص جديد' : 'تعديل الملخص', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(controller: originalController, decoration: _inputDecoration('العنوان / الجملة')),
+            const SizedBox(height: 15),
+            TextField(controller: summaryController, maxLines: 3, decoration: _inputDecoration('المحتوى المختصر')),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+            onPressed: () {
+              setState(() {
+                if (index == null) {
+                  _summaries.add({'originalText': originalController.text, 'summaryText': summaryController.text});
+                } else {
+                  _summaries[index] = {'originalText': originalController.text, 'summaryText': summaryController.text};
+                }
+              });
+              Navigator.pop(context);
+            },
+            child: const Text('حفظ', style: TextStyle(fontFamily: 'Cairo', color: Colors.white, fontWeight: FontWeight.bold)),
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  void _deleteSummary(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف', style: TextStyle(fontFamily: 'Cairo')),
+        content: const Text('هل أنت متأكد من حذف هذا الملخص؟', style: TextStyle(fontFamily: 'Cairo')),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
+          TextButton(onPressed: () { setState(() => _summaries.removeAt(index)); Navigator.pop(context); }, child: const Text('حذف', style: TextStyle(color: Colors.red))),
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final double headerHeight = MediaQuery.of(context).size.height * 0.20;
-    final bool hasExistingContent = widget.initialSummary != null && widget.initialSummary!.isNotEmpty;
-
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      resizeToAvoidBottomInset: true, 
+      appBar: AppBar(
+        title: Text(widget.lessonName, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+        backgroundColor: const Color(0xFF005F61),
+        foregroundColor: Colors.white,
+        centerTitle: true,
+        elevation: 0,
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: const Color(0xFF005F61),
+        onPressed: () => _openSummaryDialog(),
+        child: const Icon(Icons.add, color: Colors.white),
+      ),
       body: Directionality(
         textDirection: TextDirection.rtl,
-        child: Stack(
+        child: Column(
           children: [
-            Positioned.fill(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: EdgeInsets.fromLTRB(20, headerHeight + 20, 20, 30),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('محرر الشرح الأكاديمي المباشر:', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
-                      const SizedBox(height: 10),
-                      TextFormField(
-                        controller: _summaryController,
-                        maxLines: 10, 
-                        keyboardType: TextInputType.multiline,
-                        style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, height: 1.6, color: AppColors.textMain),
-                        validator: (value) => value!.trim().isEmpty ? 'لا يمكن حفظ ملخص فارغ. اكتب نصاً أو قم باستخدام زر الحذف.' : null,
-                        decoration: InputDecoration(hintText: 'اكتب هنا خلاصة القوانين أو الشرح المباشر للدرس...', hintStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey), filled: true, fillColor: Colors.white, enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.grey[200]!)), focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: AppColors.primary, width: 1.5)), errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.redAccent, width: 1.2)), focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Colors.redAccent, width: 1.5))),
-                      ),
-                      const SizedBox(height: 30),
-                      SizedBox(width: double.infinity, height: 50, child: ElevatedButton.icon(onPressed: _saveSummary, icon: const Icon(Icons.save_rounded, color: Colors.white), label: Text(hasExistingContent ? 'حفظ التعديلات' : 'نشر الملخص الجديد', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
-                      if (hasExistingContent) ...[
-                        const SizedBox(height: 12),
-                        SizedBox(width: double.infinity, height: 50, child: OutlinedButton.icon(onPressed: _deleteSummary, icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent), label: const Text('حذف الملخص نهائياً', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold, color: Colors.redAccent)), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
-                      ]
-                    ],
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              top: 0, left: 0, right: 0, height: headerHeight-20,
-              child: Container(
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft)),
-                child: SafeArea(
-                  bottom: false,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+            Expanded(
+              child: _summaries.isEmpty 
+                ? Center(
                     child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(height: 20),
-                        Row(
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                              // 💎💎 هذا هو التعديل الذي أنهى التجميد تماماً 💎💎
-                              onPressed: () => Navigator.pop(context),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [const Text('إدارة الملخص النصي', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)), Text(widget.lessonName, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.white70), maxLines: 1, overflow: TextOverflow.ellipsis)])),
-                          ],
-                        ),
+                        Icon(Icons.notes, size: 64, color: Colors.grey[300]),
+                        const SizedBox(height: 10),
+                        const Text('لا توجد ملخصات مضافة حالياً', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontSize: 16)),
                       ],
                     ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _summaries.length,
+                    itemBuilder: (context, index) {
+                      final item = _summaries[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 15),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.05 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 5))],
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                          title: Text(item['originalText'] ?? 'بدون عنوان', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16)),
+                          subtitle: Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(item['summaryText'] ?? '', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey[700])),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(icon: const Icon(Icons.edit, color: Color(0xFF005F61)), onPressed: () => _openSummaryDialog(index: index)),
+                              IconButton(icon: const Icon(Icons.delete_outline, color: Colors.redAccent), onPressed: () => _deleteSummary(index)),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, _summaries),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF005F61),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  ),
+                  child: const Text('حفظ التغييرات', style: TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
               ),
-            ),
+            )
           ],
         ),
       ),

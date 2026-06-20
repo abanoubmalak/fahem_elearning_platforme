@@ -28,19 +28,52 @@ class VideoPlayerScreen extends StatefulWidget {
 }
 
 class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
-  late VideoPlayerController _controller;
+  VideoPlayerController? _controller; // 👈 جعل المتغير اختياري لتجنب استخدامه قبل التهيئة
   bool _isInitialized = false;
   bool _isFullscreen = false;
+  bool _hasVideoError = false; // 👈 علم للإشارة إلى وجود خطأ أو عدم توفر الفيديو
 
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
-      ..initialize().then((_) {
-        if(mounted) {
-          setState(() { _isInitialized = true; });
-        }
+    _initializeVideo();
+  }
+
+  void _initializeVideo() {
+    // 1️⃣ شرط الحماية: التحقق من صحة الرابط قبل التمرير للمكتبة لمنع التجمد والسواد
+    if (widget.videoUrl.trim().isEmpty) {
+      setState(() {
+        _hasVideoError = true;
+        _isInitialized = false;
       });
+      return;
+    }
+
+    try {
+      _controller = VideoPlayerController.networkUrl(Uri.parse(widget.videoUrl))
+        ..initialize().then((_) {
+          if (mounted) {
+            setState(() { 
+              _isInitialized = true; 
+              _hasVideoError = false;
+            });
+          }
+        }).catchError((error) {
+          debugPrint('❌ خطأ في تهيئة الفيديو: $error');
+          if (mounted) {
+            setState(() {
+              _hasVideoError = true;
+              _isInitialized = false;
+            });
+          }
+        });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _hasVideoError = true;
+        });
+      }
+    }
   }
 
   // 💎 دالة تحديث حالة المشاهدة في الفايربيز
@@ -79,7 +112,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   void dispose() {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-    _controller.dispose();
+    _controller?.dispose(); // 👈 الاستدعاء الآمن للمشغل عند تدمير الصفحة
     super.dispose();
   }
 
@@ -102,11 +135,21 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                   alignment: Alignment.center,
                   children: [
                     Positioned.fill(
-                      child: _isInitialized
-                          ? FittedBox(fit: BoxFit.cover, child: SizedBox(width: _controller.value.size.width, height: _controller.value.size.height, child: VideoPlayer(_controller)))
-                          : const Center(child: CircularProgressIndicator(color: AppColors.primary)),
+                      child: _hasVideoError
+                          ? const Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.video_camera_back_rounded, color: Colors.grey, size: 42),
+                                  SizedBox(height: 8),
+                                  Text('فيديو الشرح غير متاح حالياً', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey)),
+                                ],
+                              ),
+                            )
+                          : (_isInitialized && _controller != null)
+                              ? FittedBox(fit: BoxFit.cover, child: SizedBox(width: _controller!.value.size.width, height: _controller!.value.size.height, child: VideoPlayer(_controller!)))
+                              : const Center(child: CircularProgressIndicator(color: AppColors.primary)),
                     ),
-                    // ... (باقي كود التصميم كما هو تماماً)
                     Positioned.fill(
                       child: Container(
                         decoration: BoxDecoration(
@@ -117,13 +160,13 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
                         ),
                       ),
                     ),
-                    if (_isInitialized)
+                    if (_isInitialized && _controller != null && !_hasVideoError)
                       Center(
                         child: GestureDetector(
-                          onTap: () { setState(() { _controller.value.isPlaying ? _controller.pause() : _controller.play(); }); },
+                          onTap: () { setState(() { _controller!.value.isPlaying ? _controller!.pause() : _controller!.play(); }); },
                           child: CircleAvatar(
                             radius: 32, backgroundColor: Colors.white.withAlpha((0.25 * 255).toInt()),
-                            child: CircleAvatar(radius: 26, backgroundColor: Colors.white, child: Icon(_controller.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: const Color(0xFF0D2C2D), size: 32)),
+                            child: CircleAvatar(radius: 26, backgroundColor: Colors.white, child: Icon(_controller!.value.isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: const Color(0xFF0D2C2D), size: 32)),
                           ),
                         ),
                       ),

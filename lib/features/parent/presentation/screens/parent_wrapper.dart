@@ -17,7 +17,7 @@ class ParentWrapper extends StatefulWidget {
 class _ParentWrapperState extends State<ParentWrapper> {
   int _currentIndex = 0;
 
-  // دالة لتغيير الـ Tab برمجياً من داخل الشاشات الفرعية
+  // دالة لتغيير الـ Tab برمجياً من داخل الشاشات الفرعية بسلاسة
   void _switchTab(int index) {
     setState(() {
       _currentIndex = index;
@@ -28,7 +28,7 @@ class _ParentWrapperState extends State<ParentWrapper> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      // تغليف المنظومة بالكامل بالـ Cubit
+      // تغليف المنظومة بالكامل بالـ Cubit لتغذية جميع الشاشات الفرعية حياً
       child: BlocProvider(
         create: (context) => ParentCubit(),
         child: Scaffold(
@@ -37,8 +37,8 @@ class _ParentWrapperState extends State<ParentWrapper> {
             children: [
               const ParentHomeScreen(),
               LinkChildScreen(onTabSwitch: _switchTab),        
-              const ParentProfileScreen(),    
-              PaymentCheckoutScreen(packageAmount: 100, onTabSwitch: _switchTab), 
+              PaymentCheckoutScreen(packageAmount: 150.0, onTabSwitch: _switchTab), // 👈 ترتيب منطقي ممرر له القيمة الرسمية السحابية
+              const ParentProfileScreen(),    // 👈 البروفيل في نهاية المصفوفة متطابقاً مع زر التنقل بالأسفل
             ],
           ),
           bottomNavigationBar: Container(
@@ -58,8 +58,8 @@ class _ParentWrapperState extends State<ParentWrapper> {
               items: const [
                 BottomNavigationBarItem(icon: Icon(Icons.home_rounded, size: 30), label: 'الرئيسية'),
                 BottomNavigationBarItem(icon: Icon(Icons.person_add_rounded, size: 30), label: 'إضافة طالب'),
-                BottomNavigationBarItem(icon: Icon(Icons.account_circle_rounded, size: 30), label: 'البروفيل'),
-                BottomNavigationBarItem(icon: Icon(Icons.payments_rounded, size: 30), label: 'الدفع'),
+                BottomNavigationBarItem(icon: Icon(Icons.payments_rounded, size: 30), label: 'الدفع'), // 👈 زر الدفع التبويب الثالث
+                BottomNavigationBarItem(icon: Icon(Icons.account_circle_rounded, size: 30), label: 'البروفيل'), // 👈 زر البروفيل التبويب الأخير
               ],
             ),
           ),

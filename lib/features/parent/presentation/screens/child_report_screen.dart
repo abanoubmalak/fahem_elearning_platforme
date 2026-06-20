@@ -1,5 +1,5 @@
 // lib/features/parent/presentation/screens/child_report_screen.dart
-import 'dart:math';
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور حياً
 import 'package:flutter/material.dart';
 
 class ChildReportScreen extends StatefulWidget {
@@ -19,13 +19,15 @@ class ChildReportScreen extends StatefulWidget {
 class _ChildReportScreenState extends State<ChildReportScreen> {
   Map<String, dynamic>? _selectedChild;
   late List<Map<String, dynamic>> _subjectData;
+  bool _isLoading = true; // 👈 حارس حالة التحميل السحابي
 
+  // 💎 ربط قائمة المواد بالـ IDs الرسمية المعتمدة بقاعدة بيانات فاهم
   static const List<Map<String, dynamic>> _subjectsTemplate = [
-    {'subject': 'اللغة العربية', 'icon': Icons.menu_book_rounded, 'color': Color(0xFFEDF7F7)},
-    {'subject': 'اللغة الإنجليزية', 'icon': Icons.g_translate_rounded, 'color': Color(0xFFFEF6E5)},
-    {'subject': 'الرياضيات', 'icon': Icons.calculate_outlined, 'color': Color(0xFFF1F5F9)},
-    {'subject': 'العلوم', 'icon': Icons.biotech_outlined, 'color': Color(0xFFEAFAF1)},
-    {'subject': 'الدراسات الاجتماعية', 'icon': Icons.public_rounded, 'color': Color(0xFFFFEAEA)},
+    {'id': 'ara', 'subject': 'اللغة العربية', 'icon': Icons.menu_book_rounded, 'color': Color(0xFFEDF7F7)},
+    {'id': 'eng', 'subject': 'اللغة الإنجليزية', 'icon': Icons.g_translate_rounded, 'color': Color(0xFFFEF6E5)},
+    {'id': 'math', 'subject': 'الرياضيات', 'icon': Icons.calculate_outlined, 'color': Color(0xFFF1F5F9)},
+    {'id': 'sci', 'subject': 'العلوم', 'icon': Icons.biotech_outlined, 'color': Color(0xFFEAFAF1)}, // sci متوافق مع السيرفر
+    {'id': 'soc', 'subject': 'الدراسات الاجتماعية', 'icon': Icons.public_rounded, 'color': Color(0xFFFFEAEA)},
   ];
 
   @override
@@ -33,27 +35,76 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
     super.initState();
     if (widget.childrenData.isNotEmpty) {
       _selectedChild = widget.initialChild ?? widget.childrenData.first;
-      _subjectData = _generateSubjectData(_selectedChild!);
+      // تهيئة مبدئية مأمنة بنسبة صفر لمكافحة الأخطاء البصرية أثناء التحميل
+      _subjectData = _subjectsTemplate.map((s) => {...s, 'watchProgress': 0.0, 'quizScore': 0.0}).toList();
+      _loadLiveChildReport(_selectedChild!);
+    } else {
+      _isLoading = false;
     }
   }
 
-  List<Map<String, dynamic>> _generateSubjectData(Map<String, dynamic> child) {
-    final random = Random(child['name'].hashCode);
-    return _subjectsTemplate.map((subject) {
-      return {
-        ...subject,
-        'watchProgress': 0.45 + random.nextDouble() * 0.5,
-        'quizScore': 0.45 + random.nextDouble() * 0.5,
-      };
-    }).toList();
+  // 💎 دالة جلب تقارير أداء المواد التفصيلي الحقيقي للابن من الفايرستور
+  Future<void> _loadLiveChildReport(Map<String, dynamic> child) async {
+    setState(() => _isLoading = true);
+    try {
+      // جلب سجلات تقدم الطالب بالكامل المربوطة بمعرفه الفرعي
+      final QuerySnapshot progressSnap = await FirebaseFirestore.instance
+          .collection('student_progress')
+          .where('studentId', isEqualTo: child['id'])
+          .get();
+
+      // فلترة واحتساب النسب الحركية لكل مادة بشكل مستقل
+      final List<Map<String, dynamic>> updatedData = _subjectsTemplate.map((subject) {
+        final subjectDocs = progressSnap.docs.where((doc) {
+          final pData = doc.data() as Map<String, dynamic>;
+          return pData['subjectId'] == subject['id'];
+        }).toList();
+
+        // إذا لم يبدأ الطالب المادة بعد، تظهر بنسبة 0%
+        if (subjectDocs.isEmpty) {
+          return {
+            ...subject,
+            'watchProgress': 0.0,
+            'quizScore': 0.0,
+          };
+        }
+
+        int watchCount = 0;
+        double quizSum = 0.0;
+
+        for (var doc in subjectDocs) {
+          final pData = doc.data() as Map<String, dynamic>;
+          if (pData['isVideoWatched'] == true) {
+            watchCount++;
+          }
+          quizSum += ((pData['quizScore'] ?? 0) as num).toDouble();
+        }
+
+        return {
+          ...subject,
+          'watchProgress': watchCount / subjectDocs.length,
+          'quizScore': (quizSum / subjectDocs.length) / 10.0, // القسمة على 10 لتصبح نسبة بين 0.0 و 1.0 للـ Progress Bar
+        };
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _subjectData = updatedData;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في جلب تقرير أداء الابن: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   void _onChildChanged(Map<String, dynamic>? child) {
     if (child == null || child['id'] == _selectedChild?['id']) return;
     setState(() {
       _selectedChild = child;
-      _subjectData = _generateSubjectData(child);
     });
+    _loadLiveChildReport(child); // إعادة جلب التقارير حياً فور تبديل الابن
   }
 
   double _calculateSubjectScore(double watch, double quiz) => (watch * 0.4) + (quiz * 0.6);
@@ -67,7 +118,6 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 👈 الواجهة المخصصة في حالة عدم وجود أبناء
     if (widget.childrenData.isEmpty) {
       return Directionality(
         textDirection: TextDirection.rtl,
@@ -102,44 +152,47 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
           children: [
             _buildHeader(overallScore),
             Expanded(
-              child: ListView.builder(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                itemCount: _subjectData.length,
-                itemBuilder: (context, index) {
-                  final data = _subjectData[index];
-                  final double finalSubjectScore = _calculateSubjectScore(data['watchProgress'], data['quizScore']);
+              // 💎 دمج مؤشر التحميل بسلاسة لضمان جودة الأداء البصري وثبات التصميم 💎
+              child: _isLoading 
+                  ? const Center(child: CircularProgressIndicator(color: Color(0xFF005F61), strokeWidth: 4))
+                  : ListView.builder(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                      itemCount: _subjectData.length,
+                      itemBuilder: (context, index) {
+                        final data = _subjectData[index];
+                        final double finalSubjectScore = _calculateSubjectScore(data['watchProgress'], data['quizScore']);
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: data['color'], borderRadius: BorderRadius.circular(12)), child: Icon(data['icon'], color: const Color(0xFF005F61), size: 22)),
-                            const SizedBox(width: 14),
-                            Expanded(child: Text(data['subject'], style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                            Text('${(finalSubjectScore * 100).toStringAsFixed(0)}%', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-                        ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(value: finalSubjectScore, backgroundColor: const Color(0xFFF1F5F9), color: const Color(0xFF005F61), minHeight: 6)),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(child: _buildReportSubTile(label: 'مشاهدة (40%)', value: (data['watchProgress'] * 100).toStringAsFixed(0), icon: Icons.play_circle_outline_rounded)),
-                            const SizedBox(width: 10),
-                            Expanded(child: _buildReportSubTile(label: 'اختبار (60%)', value: (data['quizScore'] * 100).toStringAsFixed(0), icon: Icons.assignment_outlined, color: const Color(0xFFE6A100))),
-                          ],
-                        ),
-                      ],
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: data['color'], borderRadius: BorderRadius.circular(12)), child: Icon(data['icon'], color: const Color(0xFF005F61), size: 22)),
+                                  const SizedBox(width: 14),
+                                  Expanded(child: Text(data['subject'], style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                  Text('${(finalSubjectScore * 100).toStringAsFixed(0)}%', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(value: finalSubjectScore, backgroundColor: const Color(0xFFF1F5F9), color: const Color(0xFF005F61), minHeight: 6)),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: _buildReportSubTile(label: 'مشاهدة (40%)', value: (data['watchProgress'] * 100).toStringAsFixed(0), icon: Icons.play_circle_outline_rounded)),
+                                  const SizedBox(width: 10),
+                                  Expanded(child: _buildReportSubTile(label: 'اختبار (60%)', value: (data['quizScore'] * 100).toStringAsFixed(0), icon: Icons.assignment_outlined, color: const Color(0xFFE6A100))),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
                     ),
-                  );
-                },
-              ),
             ),
           ],
         ),

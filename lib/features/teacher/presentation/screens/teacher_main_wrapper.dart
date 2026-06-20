@@ -4,7 +4,7 @@ import 'package:fahem/features/teacher/presentation/screens/teacher_dashboard_sc
 import 'package:fahem/features/teacher/presentation/screens/teacher_profits_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/teacher_questions_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/teacher_statistics_screen.dart';
-import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart'; // 👈 استيراد الـ Cubit
+import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart'; 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,6 +18,7 @@ class TeacherMainWrapper extends StatefulWidget {
 class _TeacherMainWrapperState extends State<TeacherMainWrapper> {
   int _currentTabIndex = 0;
 
+  // القائمة المعتمدة للتبويبات الأربعة المربوطة بالـ Cubit المركزي
   final List<Widget> _tabs = [
     const TeacherSubjectsTab(),
     const TeacherQuestionsScreen(),
@@ -29,7 +30,7 @@ class _TeacherMainWrapperState extends State<TeacherMainWrapper> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      // 👈 تغليف المنظومة لتفعيل المزامنة السحابية فور فتح الشاشة
+      // 💎 تغليف المنظومة بالكامل وحقن الـ Cubit حياً فور فتح بوابة المعلم 💎
       child: BlocProvider(
         create: (context) => TeacherCubit()..fetchTeacherDashboard(),
         child: Scaffold(

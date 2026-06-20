@@ -27,20 +27,24 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
 
     setState(() => _isProcessing = true);
 
+    final parentCubit = context.read<ParentCubit>();
+
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (_) => _PaymentProcessingDialog(
+      builder: (BuildContext dialogContext) => _PaymentProcessingDialog(
         onCompleted: () {
-          if (mounted) Navigator.of(context).pop(); 
-          // 1. تحديث حالة الدفع في الـ Cubit
-          context.read<ParentCubit>().paySubscription(_selectedChildId!);
-          setState(() {
-            _isProcessing = false;
-            _selectedChildId = null; // إعادة تعيين الاختيار
-          });
-          // 2. توجيه ولي الأمر للشاشة الرئيسية فوراً
-          widget.onTabSwitch(0);
+          if (Navigator.canPop(dialogContext)) Navigator.of(dialogContext).pop(); 
+          
+          parentCubit.paySubscription(_selectedChildId!);
+          
+          if (mounted) {
+            setState(() {
+              _isProcessing = false;
+              _selectedChildId = null; 
+            });
+            widget.onTabSwitch(0);
+          }
         },
       ),
     );
@@ -50,13 +54,13 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   Widget build(BuildContext context) {
     return BlocBuilder<ParentCubit, ParentState>(
       builder: (context, state) {
-        // فلترة الأبناء: إحضار من لم يدفع فقط
         final unpaidChildren = state.children.where((child) => child['isPaid'] == false).toList();
 
-        // التحديد التلقائي لأول ابن غير مسدد
-        if (unpaidChildren.isNotEmpty && _selectedChildId == null) {
-          _selectedChildId = unpaidChildren.first['id'];
-        } else if (unpaidChildren.isEmpty) {
+        if (unpaidChildren.isNotEmpty) {
+          if (_selectedChildId == null || !unpaidChildren.any((c) => c['id'] == _selectedChildId)) {
+            _selectedChildId = unpaidChildren.first['id'];
+          }
+        } else {
           _selectedChildId = null;
         }
 
@@ -66,7 +70,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
             backgroundColor: const Color(0xFFF8FAFC),
             appBar: _buildAppBar(),
             body: unpaidChildren.isEmpty
-                ? _buildAllPaidState() // 👈 واجهة "لا توجد مستحقات"
+                ? _buildAllPaidState() 
                 : Column(
                     children: [
                       Expanded(
@@ -101,7 +105,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
                               ),
                               const SizedBox(height: 25),
                               _buildSectionTitle('تفاصيل المستحقات'),
-                              _buildInvoiceDetails(unpaidChildren.firstWhere((c) => c['id'] == _selectedChildId, orElse: () => {})['name'] ?? ''),
+                              _buildInvoiceDetails(unpaidChildren.firstWhere((c) => c['id'] == _selectedChildId, orElse: () => {'name': ''})['name'] ?? ''),
                               const SizedBox(height: 25),
                               _buildSectionTitle('اختر طريقة الدفع'),
                               _buildPaymentMethodTile(id: 'card', title: 'الدفع ببطاقة ائتمانية', icon: Icons.credit_card_rounded),
@@ -120,7 +124,6 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
     );
   }
 
-  // واجهة "تم السداد بالكامل"
   Widget _buildAllPaidState() {
     return Center(
       child: Column(
@@ -134,7 +137,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
           const SizedBox(height: 20),
           const Text('لا توجد مستحقات مالية', style: TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
           const SizedBox(height: 8),
-          const Text('جميع أبنائك المربوطين بالحساب مسددون للاشتراك.', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.grey)),
+          const Text('جميع أبنائك المربوطين بالحساب مسددون للاشتراك بانتظام.', style: TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: Colors.grey)),
         ],
       ),
     );
@@ -144,12 +147,14 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
+      toolbarHeight: 70,
+      automaticallyImplyLeading: false,
       flexibleSpace: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], end: Alignment.bottomLeft),
         ),
       ),
-      title: const Text('إتمام عملية الدفع', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
+      title: const Text('إتمام عملية الدفع الرقمي', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18)),
       centerTitle: true,
     );
   }
@@ -157,10 +162,11 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
   Widget _buildSectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12, top: 4),
-      child: Text(title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: Color(0xFF1F2937))),
+      child: Text(title, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 14.5, color: Color(0xFF1F2937))),
     );
   }
 
+  // 💎 تعديل ويدجت التفاصيل لحماية الصفوف من الأوفر فلو نهائياً 💎
   Widget _buildInvoiceDetails(String childName) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -170,16 +176,32 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('اسم الطالب:', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.grey.shade600)),
-              Text(childName, style: const TextStyle(fontFamily: 'Cairo', fontSize: 15.5, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+              const Expanded( // 👈 حماية نص العنوان الأول
+                child: Text(
+                  'اسم الطالب المستفيد:', 
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: Color(0xFF4B5563)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text(childName, style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
             ],
           ),
           const Divider(height: 30),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('القيمة:', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.grey.shade600)),
-              Text('${widget.packageAmount.toStringAsFixed(0)} ج.م', style: const TextStyle(fontFamily: 'Cairo', fontSize: 15.5, fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
+              const Expanded( // 👈 حماية نص العنوان الثاني الطويل ومنع الـ Overflow المذكور بالصورة
+                child: Text(
+                  'قيمة اشتراك الترم الثاني للعلوم:', 
+                  style: TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: Color(0xFF4B5563)),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Text('${widget.packageAmount.toStringAsFixed(0)} ج.م', style: const TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
             ],
           ),
         ],
@@ -227,8 +249,9 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('الإجمالي', style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: Colors.grey)),
+                  const Text('المبلغ الإجمالي', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey)),
                   Text('${widget.packageAmount.toStringAsFixed(0)} ج.م', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 18, color: Color(0xFF005F61))),
                 ],
               ),
@@ -240,7 +263,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), disabledBackgroundColor: Colors.grey.shade300, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0),
                 child: _isProcessing
                     ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, color: Colors.white))
-                    : const Text('ادفع الآن', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white)),
+                    : const Text('ادفع الآن بأمان', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 15, color: Colors.white)),
               ),
             ),
           ],
@@ -294,7 +317,7 @@ class _PaymentProcessingDialogState extends State<_PaymentProcessingDialog> {
             const SizedBox(height: 22),
             Text(_isSuccess ? 'تمت عملية الدفع بنجاح' : 'جاري تنفيذ عملية الدفع...', textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, fontSize: 16, color: Color(0xFF1F2937))),
             const SizedBox(height: 6),
-            Text(_isSuccess ? 'تم تسجيل العملية بنجاح' : 'يرجى الانتظار، لا تغلق الشاشة', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: Colors.grey.shade500)),
+            Text(_isSuccess ? 'تم تسجيل العملية بنجاح' : 'يرجى الانتظار، لا تغلق الشاشة', textAlign: TextAlign.center, style: TextStyle(fontFamily: 'Cairo', fontSize: 12.5, color: Colors.grey[500])),
           ],
         ),
       ),

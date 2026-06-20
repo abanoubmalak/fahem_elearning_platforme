@@ -1,4 +1,5 @@
 // lib/features/teacher/presentation/screens/teacher_financial_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور لمعالجة الـ Timestamp
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart';
 import 'package:flutter/material.dart';
@@ -20,9 +21,7 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-      // 👈 تم تغيير الاسم إلى sheetContext لمنع تداخل المسارات
       builder: (sheetContext) => StatefulBuilder(
-        // 👈 تم تغيير الاسم إلى modalContext لتخصيص سياق المودال الداخلي
         builder: (modalContext, setModalState) => Directionality(
           textDirection: TextDirection.rtl,
           child: Padding(
@@ -54,9 +53,12 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
                     onPressed: () {
                       final double? amount = double.tryParse(amountController.text.trim());
                       if (amount != null && amount > 0 && amount <= availableBalance) {
-                        // 👈 استخدام الـ context الأصلي التابع للشاشة للوصول للـ Cubit بنجاح
-                        BlocProvider.of<TeacherCubit>(context).requestWithdrawal(amount, selectedMethod);
-                        Navigator.pop(modalContext); // 👈 إغلاق المودال باستخدام سياقه الخاص
+                        
+                        // 💎 توحيد مسمى طريقة السحب لتتوافق 100% مع هيكل الداتابيز والـ Seeder 💎
+                        final String formalMethod = selectedMethod == 'vodafone' ? 'vodafone_cash' : 'bank_transfer';
+                        
+                        BlocProvider.of<TeacherCubit>(context).requestWithdrawal(amount, formalMethod);
+                        Navigator.pop(modalContext); 
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال طلب السحب للإدارة بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)));
                       } else {
                         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال مبلغ صحيح ولا يتجاوز الرصيد المتاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
@@ -120,7 +122,22 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
                         children: [
                           const Text('السجل المالي للاشتراكات', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain)),
                           const SizedBox(height: 16),
+                          
+                          if (transactions.isEmpty)
+                            const Center(child: Padding(padding: EdgeInsets.all(30.0), child: Text('لا توجد عمليات اشتراك مسجلة حالياً.', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontWeight: FontWeight.bold)))),
+                          
                           ...transactions.map((trans) {
+                            // 💎 فحص وتحويل الـ Timestamp السحابي حياً إلى تاريخ مقروء ومنسق 💎
+                            String formattedDate = '';
+                            if (trans['createdAt'] != null && trans['createdAt'] is Timestamp) {
+                              final DateTime date = (trans['createdAt'] as Timestamp).toDate();
+                              formattedDate = '${date.year}/${date.month}/${date.day}';
+                            }
+
+                            // جلب صافي ربح المدرس المعتمد من الداتابيز
+                            final double teacherNetProfit = (trans['teachersProfit'] ?? 0.0).toDouble();
+                            final String transPackageName = trans['packageName'] ?? 'اشتراك باقة العلوم';
+
                             return Container(
                               margin: const EdgeInsets.only(bottom: 12),
                               padding: const EdgeInsets.all(16),
@@ -129,8 +146,17 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
                                 children: [
                                   Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: const Color(0xFFEAFAF1), borderRadius: BorderRadius.circular(14)), child: const Icon(Icons.arrow_downward_rounded, color: Color(0xFF27AE60), size: 20)),
                                   const SizedBox(width: 14),
-                                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('اشتراك طالب: ${trans['studentName'] ?? 'طالب'}', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textMain)), Text(trans['date'] ?? '', style: TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey[500]))])),
-                                  Text('+ ${trans['amount']} ج.م', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF27AE60))),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start, 
+                                      children: [
+                                        Text(transPackageName, style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textMain), maxLines: 1, overflow: TextOverflow.ellipsis), 
+                                        const SizedBox(height: 2),
+                                        Text(formattedDate, style: TextStyle(fontFamily: 'Montserrat', fontSize: 11, color: Colors.grey[500], fontWeight: FontWeight.bold))
+                                      ]
+                                    )
+                                  ),
+                                  Text('+ ${teacherNetProfit.toStringAsFixed(0)} ج.م', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF27AE60))),
                                 ],
                               ),
                             );

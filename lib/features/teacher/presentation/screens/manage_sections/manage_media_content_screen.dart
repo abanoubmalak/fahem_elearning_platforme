@@ -1,6 +1,10 @@
 // lib/features/teacher/presentation/screens/manage_sections/manage_media_content_screen.dart
+import 'dart:io';
+import 'dart:convert'; // 👈 ضروري لفك تشفير بيانات JSON القادمة من Cloudinary
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:http/http.dart' as http; // 👈 تأكد من إضافة حزمة http في pubspec.yaml
 
 class ManageMediaContentScreen extends StatefulWidget {
   final String lessonName;
@@ -18,8 +22,14 @@ class ManageMediaContentScreen extends StatefulWidget {
 
 class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
   String? _currentVideoOnServer; 
-  String? _selectedVideoFromGallery; 
+  File? _selectedVideoFile; 
   bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  // ⚠️ إعدادات حسابك في Cloudinary (استبدلها ببيانات حسابك من لوحة التحكم)
+// ⚠️ الإعدادات الصحيحة المطابقة لحسابك الآن بعد فحص الـ Preset:
+  final String _cloudName = "dq8borvfa"; // 👈 إذا استمر الـ 401، تأكد من الـ Cloud Name الصريح من صفحة الـ Dashboard الرئيسية
+  final String _uploadPreset = "ea7g0e9u"; // ✅ مضبوط وصحيح تماماً كما بالصورة/ قم بإنشاء Unsigned Preset من إعدادات الرفع في موقع Cloudinary
 
   @override
   void initState() {
@@ -27,29 +37,79 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
     _currentVideoOnServer = widget.initialContent;
   }
 
-  void _pickVideoFromGallery() {
-    setState(() {
-      _selectedVideoFromGallery = 'شرح_الدرس_الأول_جودة_عالية.mp4';
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم اختيار الفيديو من المعرض بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.primary),
-    );
+  // اختيار فيديو من المعرض
+  Future<void> _pickVideoFromGallery() async {
+    try {
+      final XFile? pickedFile = await _picker.pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: const Duration(minutes: 15),
+      );
+
+      if (pickedFile != null) {
+        setState(() {
+          _selectedVideoFile = File(pickedFile.path);
+        });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('تم اختيار الفيديو من المعرض بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: AppColors.primary),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ أثناء اختيار الفيديو: $e', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
   }
 
-  void _uploadVideoToServer() {
+  // ✅ الرفع الحقيقي المباشر إلى Cloudinary API
+  Future<void> _uploadVideoToServer() async {
+    if (_selectedVideoFile == null) return;
+
     setState(() => _isUploading = true);
 
-    Future.delayed(const Duration(seconds: 3), () {
-      if (!mounted) return; // 👈 حماية الشاشة من الكراش أثناء الرفع
-      setState(() {
-        _isUploading = false;
-        _currentVideoOnServer = _selectedVideoFromGallery; 
-        _selectedVideoFromGallery = null; 
-      });
+    try {
+      // رابط الرفع الخاص بالفيديوهات في Cloudinary
+      final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/video/upload');
+      
+      final request = http.MultipartRequest('POST', url)
+        ..fields['upload_preset'] = _uploadPreset
+        ..files.add(await http.MultipartFile.fromPath('file', _selectedVideoFile!.path));
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final responseData = await response.stream.bytesToString();
+        final jsonResponse = jsonDecode(responseData);
+        
+        // الرابط السحابي النهائي الذي سنقوم بحفظه في Firestore للطلاب
+        final String videoUrl = jsonResponse['secure_url']; 
+
+        if (!mounted) return;
+        setState(() {
+          _isUploading = false;
+          _currentVideoOnServer = videoUrl; 
+          _selectedVideoFile = null; 
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('تم رفع الفيديو إلى Cloudinary وبثه بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF27AE60)),
+        );
+        
+        // إرجاع رابط الفيديو الجديد إلى شاشة الـ Hub ليقوم الـ Cubit بتحديث الفايربيز فوراً
+        Navigator.pop(context, _currentVideoOnServer);
+      } else {
+        throw Exception("فشل الرفع، رمز الحالة: ${response.statusCode}");
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('تم رفع الفيديو للسيرفر وبثه للطلاب بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF27AE60)),
+        SnackBar(content: Text('فشل الرفع السحابي: $e', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
       );
-    });
+    }
   }
 
   void _deleteVideo() {
@@ -76,14 +136,16 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context);
-                  if (!mounted) return; // 👈 حماية
+                  if (!mounted) return; 
                   setState(() {
-                    _currentVideoOnServer = null; 
-                    _selectedVideoFromGallery = null;
+                    _currentVideoOnServer = null; // ✅ تعيينه بـ null يحل مشكلة الحالة فوراً
+                    _selectedVideoFile = null;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('تم حذف الفيديو من السيرفر', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
                   );
+                  // إرجاع قيمة فارغة للـ Hub لحذف الرابط تماماً من مستند الـ Firestore
+                  Navigator.pop(context, '');
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                 child: const Text('نعم، احذف', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
@@ -98,7 +160,9 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
   @override
   Widget build(BuildContext context) {
     final double headerHeight = (MediaQuery.of(context).size.height * 0.20) - 20;
-    final bool isVideoLive = _currentVideoOnServer != null;
+    
+    // ✅ الحل النهائي والأكيد لمشكلة التحديث: التحقق من وجود القيمة وعدم كونها فارغة نصياً
+    final bool isVideoLive = _currentVideoOnServer != null && _currentVideoOnServer!.trim().isNotEmpty;
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
@@ -124,7 +188,7 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
                           Text(isVideoLive ? 'الفيديو مرفوع ونشط على السيرفر' : 'لا يوجد فيديو مرفوع حالياً', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: isVideoLive ? const Color(0xFF27AE60) : Colors.grey[600])),
                           if (isVideoLive) ...[
                             const SizedBox(height: 8),
-                            Text(_currentVideoOnServer!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey), maxLines: 1, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
+                            Text(_currentVideoOnServer!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey), maxLines: 2, overflow: TextOverflow.ellipsis, textAlign: TextAlign.center),
                           ],
                         ],
                       ),
@@ -133,20 +197,20 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
                     const Text('لوحة التحكم (رفع من المعرض):', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey)),
                     const SizedBox(height: 15),
                     if (!isVideoLive) ...[
-                      if (_selectedVideoFromGallery == null) ...[
+                      if (_selectedVideoFile == null) ...[
                         SizedBox(width: double.infinity, height: 52, child: ElevatedButton.icon(onPressed: _pickVideoFromGallery, icon: const Icon(Icons.photo_library_rounded, color: Colors.white), label: const Text('اختيار فيديو من معرض الهاتف', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
                       ] else ...[
-                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withAlpha((0.3 * 255).toInt()))), child: Row(children: [const Icon(Icons.movie_creation_rounded, color: AppColors.primary), const SizedBox(width: 10), Expanded(child: Text(_selectedVideoFromGallery!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)), IconButton(icon: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 20), onPressed: _isUploading ? null : () => setState(() => _selectedVideoFromGallery = null))])),
+                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withAlpha((0.3 * 255).toInt()))), child: Row(children: [const Icon(Icons.movie_creation_rounded, color: AppColors.primary), const SizedBox(width: 10), Expanded(child: Text(_selectedVideoFile!.path.split('/').last, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis)), IconButton(icon: const Icon(Icons.close_rounded, color: Colors.redAccent, size: 20), onPressed: _isUploading ? null : () => setState(() => _selectedVideoFile = null))])),
                         const SizedBox(height: 12),
-                        SizedBox(width: double.infinity, height: 52, child: ElevatedButton.icon(onPressed: _isUploading ? null : _uploadVideoToServer, icon: _isUploading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Icon(Icons.cloud_upload_rounded, color: Colors.white), label: Text(_isUploading ? 'جاري رفع الفيديو للسيرفر...' : 'تأكيد رفع الفيديو للطلاب', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE6A100), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
+                        SizedBox(width: double.infinity, height: 52, child: ElevatedButton.icon(onPressed: _isUploading ? null : _uploadVideoToServer, icon: _isUploading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Icon(Icons.cloud_upload_rounded, color: Colors.white), label: Text(_isUploading ? 'جاري رفع الفيديو إلى Cloudinary...' : 'تأكيد رفع الفيديو للطلاب', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE6A100), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
                       ],
                     ] else ...[
                       SizedBox(width: double.infinity, height: 50, child: ElevatedButton.icon(onPressed: _pickVideoFromGallery, icon: const Icon(Icons.cameraswitch_rounded, color: Colors.white), label: const Text('استبدال واختيار فيديو آخر', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF005F61), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
-                      if (_selectedVideoFromGallery != null) ...[
+                      if (_selectedVideoFile != null) ...[
                         const SizedBox(height: 12),
-                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withAlpha((0.3 * 255).toInt()))), child: Row(children: [const Icon(Icons.movie_creation_rounded, color: AppColors.primary), const SizedBox(width: 10), Expanded(child: Text(_selectedVideoFromGallery!, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis))])),
+                        Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: AppColors.primary.withAlpha((0.3 * 255).toInt()))), child: Row(children: [const Icon(Icons.movie_creation_rounded, color: AppColors.primary), const SizedBox(width: 10), Expanded(child: Text(_selectedVideoFile!.path.split('/').last, style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis))])),
                         const SizedBox(height: 12),
-                        SizedBox(width: double.infinity, height: 50, child: ElevatedButton.icon(onPressed: _isUploading ? null : _uploadVideoToServer, icon: _isUploading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Icon(Icons.cloud_upload_rounded, color: Colors.white), label: Text(_isUploading ? 'جاري الاستبدال والرفع...' : 'تأكيد رفع الفيديو الجديد', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE6A100), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
+                        SizedBox(width: double.infinity, height: 50, child: ElevatedButton.icon(onPressed: _isUploading ? null : _uploadVideoToServer, icon: _isUploading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5)) : const Icon(Icons.cloud_upload_rounded, color: Colors.white), label: Text(_isUploading ? 'جاري الاستبدال والرفع السحابي...' : 'تأكيد رفع الفيديو الجديد', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE6A100), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)), elevation: 0))),
                       ],
                       const SizedBox(height: 12),
                       SizedBox(width: double.infinity, height: 50, child: OutlinedButton.icon(onPressed: _isUploading ? null : _deleteVideo, icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent), label: const Text('حذف الفيديو من السيرفر نهائياً', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, height: 1.5, fontWeight: FontWeight.bold, color: Colors.redAccent)), style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.redAccent, width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16))))),
@@ -167,8 +231,7 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
                       children: [
                         IconButton(
                           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18),
-                          // 💎💎 هذا هو التعديل الذي أنهى التجميد تماماً 💎💎
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pop(context, _currentVideoOnServer),
                         ),
                         const SizedBox(width: 8),
                         Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.center, mainAxisSize: MainAxisSize.min, children: [const Text('إدارة فيديو الدرس', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)), Text(widget.lessonName, style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.white70), maxLines: 1, overflow: TextOverflow.ellipsis)])),
