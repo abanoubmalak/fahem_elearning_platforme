@@ -1,24 +1,34 @@
 // lib/features/admin/presentation/screens/teachers/edit_teacher_screen.dart
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
+import 'package:http/http.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 // ─────────────────────────────────────────────
 // نموذج بيانات المادة (تأكد من توحيده في ملف منفصل لاحقاً)
 // ─────────────────────────────────────────────
-class AssignedSubject {
-  final String subject;
+
+  class AssignedSubject {
+  final String subjectCode;
+  final String subjectName;
+
   final String stage;
   final String term;
 
   AssignedSubject({
-    required this.subject,
+    required this.subjectCode,
+    required this.subjectName,
     required this.stage,
     required this.term,
   });
 
   bool matches(AssignedSubject other) =>
-      subject == other.subject && stage == other.stage && term == other.term;
+      subjectCode == other.subjectCode &&
+      stage == other.stage &&
+      term == other.term;
 }
 
 // ─────────────────────────────────────────────
@@ -77,17 +87,34 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
   void initState() {
     super.initState();
     // تعبئة البيانات الحالية للمعلم في الحقول
-    _nameController = TextEditingController(text: widget.teacherData['name']);
-    _emailController = TextEditingController(text: widget.teacherData['email']);
-    _phoneController = TextEditingController(text: widget.teacherData['phone']);
-    
-    // أخذ نسخة من المواد الحالية لتعديلها
-    final List<dynamic>? existingSubjects = widget.teacherData['subjects'];
-    if (existingSubjects != null) {
-      _assignedSubjects = List<AssignedSubject>.from(existingSubjects);
-    } else {
-      _assignedSubjects = [];
-    }
+    _nameController = TextEditingController(text: widget.teacherData['name'] ?? '');
+    _emailController = TextEditingController(text: widget.teacherData['email'] ?? '');
+    _phoneController = TextEditingController(text: widget.teacherData['phone'] ?? '');
+    const reverseSubjectCodes = {
+  'arabic': 'لغة عربية',
+  'english': 'لغة إنجليزية',
+  'math': 'رياضيات',
+  'sci': 'علوم',
+  'social': 'دراسات اجتماعية',
+};
+
+final List<dynamic>? existingCourses =
+    widget.teacherData['assignedCourses'];
+
+_assignedSubjects = [];
+
+if (existingCourses != null) {
+  for (var course in existingCourses) {
+    _assignedSubjects.add(
+ AssignedSubject(
+   subjectCode: course['subject'],
+   subjectName: reverseSubjectCodes[course['subject']] ?? course['subject'],
+   stage: course['stage'],
+   term: course['term'],
+ ),
+);
+  }
+}
   }
 
   @override
@@ -107,8 +134,21 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
       return;
     }
 
-    final newEntry = AssignedSubject(subject: _selectedSubject!, stage: _selectedStage!, term: _selectedTerm!);
+const subjectCodes = {
+ 'لغة عربية':'arabic',
+ 'لغة إنجليزية':'english',
+ 'رياضيات':'math',
+ 'علوم':'sci',
+ 'دراسات اجتماعية':'social',
+};
 
+
+final newEntry = AssignedSubject(
+ subjectCode: subjectCodes[_selectedSubject]!,
+ subjectName: _selectedSubject!,
+ stage: _selectedStage!,
+ term: _selectedTerm!,
+);
     if (_assignedSubjects.any((e) => e.matches(newEntry))) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('هذه المادة مضافة بالفعل', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.orange));
       return;
@@ -119,31 +159,67 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
       _selectedSubject = null;
     });
   }
+void _saveChanges() async {
+  // 1. جلب البيانات القديمة الموجودة مسبقاً للمقارنة
+  final List<dynamic> oldCourses = widget.teacherData['assignedCourses'] ?? [];
 
-  void _saveChanges() {
-    if (!_formKey.currentState!.validate()) return;
+  // 2. تحويل القائمة المحلية إلى قائمة خرائط (Map) مع الحفاظ على قيم الموارد القديمة إن وجدت
+  final updatedCoursesList = _assignedSubjects.map((subjectObj) {
 
-    if (_assignedSubjects.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إضافة مادة واحدة على الأقل', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
-      return;
-    }
+final existingCourse = oldCourses.firstWhere(
+ (c)=> 
+ c['subject']==subjectObj.subjectCode &&
+ c['stage']==subjectObj.stage &&
+ c['term']==subjectObj.term,
+ orElse: ()=>{},
+);
 
-    // تجهيز البيانات المحدثة للإرسال للشاشة السابقة أو الـ API
-    final updatedData = {
-      ...widget.teacherData, // الاحتفاظ بالبيانات القديمة زي الـ ID
-      'name': _nameController.text.trim(),
-      'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
-      'subjects': _assignedSubjects,
-    };
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم تحديث بيانات المعلم بنجاح!', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)),
-    );
-    
-    // إرجاع البيانات المحدثة لشاشة التفاصيل
-    Navigator.pop(context, updatedData);
+return {
+
+'subject':subjectObj.subjectCode,
+
+'stage':subjectObj.stage,
+
+'term':subjectObj.term,
+
+
+'pdfs': existingCourse['pdfs'] ?? 0,
+
+'quizzes': existingCourse['quizzes'] ?? 0,
+
+'videos': existingCourse['videos'] ?? 0,
+
+};
+
+}).toList();
+
+  // 3. تجهيز البيانات الأساسية
+  final Map<String, dynamic> teacherBasicData = {
+    'name': _nameController.text.trim(),
+    'phone': _phoneController.text.trim(),
+    'email': _emailController.text.trim(),
+    // تحديث التخصص بناءً على أول مادة مضافة
+'specialty': _assignedSubjects.isNotEmpty
+ ? _assignedSubjects.first.subjectName
+ : '',  };
+
+  // 4. استدعاء الـ Cubit
+  // تأكد أن الدالة في الـ Cubit تستخدم .update وليس .set
+  final error = await context.read<AdminCubit>().updateTeacherData(
+    teacherId: widget.teacherData['id'], 
+    newCourses: updatedCoursesList,
+    teacherBasicData: teacherBasicData,
+  );
+
+  if (error == null) {
+        Navigator.pop(context, true);
+
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث البيانات بنجاح')));
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
   }
+}
 
   // ─────────────────────────────────────────────
   // Build
@@ -320,12 +396,12 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
     final Color textColor = isPrimary ? const Color(0xFF2E7D32) : const Color(0xFF1565C0);
 
     return Chip(
-      avatar: CircleAvatar(backgroundColor: textColor.withOpacity(0.15), child: Text(entry.subject.substring(0, 1), style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: textColor))),
+      avatar: CircleAvatar(backgroundColor: textColor.withOpacity(0.15), child: Text(entry.subjectName.substring(0, 1), style: TextStyle(fontFamily: 'Cairo', fontSize: 11, fontWeight: FontWeight.bold, color: textColor))),
       label: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(entry.subject, style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
+          Text(entry.subjectName, style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: textColor)),
           Text('${entry.stage} | ${entry.term}', style: TextStyle(fontFamily: 'Cairo', fontSize: 10, color: textColor.withOpacity(0.75))),
         ],
       ),

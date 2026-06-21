@@ -2,6 +2,8 @@
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 
 class AdminStudentsManagementScreen extends StatefulWidget {
   const AdminStudentsManagementScreen({super.key});
@@ -11,22 +13,13 @@ class AdminStudentsManagementScreen extends StatefulWidget {
 }
 
 class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementScreen> {
-  // ── بيانات محاكاة للطلاب (Mock Data) ──
-  final List<Map<String, dynamic>> _allStudents = [
-    {'id': '1', 'name': 'محمود أحمد', 'stage': 'الصف الثالث الإعدادي', 'phone': '01012345678', 'isActive': true},
-    {'id': '2', 'name': 'سارة محمد', 'stage': 'الصف الأول الثانوي', 'phone': '01123456789', 'isActive': true},
-    {'id': '3', 'name': 'علي حسن', 'stage': 'الصف الثاني الثانوي', 'phone': '01234567890', 'isActive': false},
-    {'id': '4', 'name': 'ياسمين طارق', 'stage': 'الصف الثالث الثانوي', 'phone': '01534567891', 'isActive': true},
-  ];
-
-  // ── قائمة البحث ──
-  List<Map<String, dynamic>> _filteredStudents = [];
+  // ── نص البحث ──
+  String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
-  @override
+ @override
   void initState() {
     super.initState();
-    _filteredStudents = _allStudents;
     _searchController.addListener(_onSearchChanged);
   }
 
@@ -37,27 +30,31 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
   }
 
   // ── دالة البحث ──
+ // ── دالة البحث ──
   void _onSearchChanged() {
-    final query = _searchController.text.trim().toLowerCase();
     setState(() {
-      if (query.isEmpty) {
-        _filteredStudents = _allStudents;
-      } else {
-        _filteredStudents = _allStudents.where((student) {
-          final name = student['name'].toString().toLowerCase();
-          final phone = student['phone'].toString();
-          return name.contains(query) || phone.contains(query);
-        }).toList();
-      }
+      _searchQuery = _searchController.text.trim().toLowerCase();
     });
   }
 
+  // ── فلترة الطلاب الحقيقيين القادمين من Firestore ──
+  List<Map<String, dynamic>> _filterStudents(List<Map<String, dynamic>> allStudents) {
+    if (_searchQuery.isEmpty) return allStudents;
+    return allStudents.where((student) {
+      final name = (student['name'] ?? '').toString().toLowerCase();
+      final phone = (student['phone'] ?? '').toString();
+      return name.contains(_searchQuery) || phone.contains(_searchQuery);
+    }).toList();
+  }
+
   // ── دالة تغيير حالة الطالب ──
-  void _toggleStudentStatus(int index) {
-    setState(() {
-      _filteredStudents[index]['isActive'] = !_filteredStudents[index]['isActive'];
-      // TODO: تحديث الحالة في الـ API
-    });
+  // ── دالة تغيير حالة الطالب في Firestore ──
+  void _toggleStudentStatus(Map<String, dynamic> student) {
+    context.read<AdminCubit>().toggleUserStatus(
+      collection: 'students',
+      userId: student['id'],
+      currentStatus: student['isActive'] ?? true,
+    );
   }
 
   @override
@@ -98,18 +95,36 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
                   const SizedBox(height: 16),
 
                   // قائمة الطلاب
+                  // قائمة الطلاب
                   Expanded(
-                    child: _filteredStudents.isEmpty
-                        ? _buildEmptyState()
-                        : ListView.builder(
-                            physics: const BouncingScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
-                            itemCount: _filteredStudents.length,
-                            itemBuilder: (context, index) {
-                              final student = _filteredStudents[index];
-                              return _buildStudentCard(student, index);
-                            },
-                          ),
+                    child: BlocBuilder<AdminCubit, AdminState>(
+                      builder: (context, state) {
+                        if (state is AdminLoading || state is AdminInitial) {
+                          return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
+                        }
+
+                        if (state is AdminError) {
+                          return Center(
+                            child: Text(state.message, style: const TextStyle(fontFamily: 'Cairo', color: Colors.redAccent)),
+                          );
+                        }
+
+                        final allStudents = state is AdminLoaded ? state.students : <Map<String, dynamic>>[];
+                        final filteredStudents = _filterStudents(allStudents);
+
+                        if (filteredStudents.isEmpty) return _buildEmptyState();
+
+                        return ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 40),
+                          itemCount: filteredStudents.length,
+                          itemBuilder: (context, index) {
+                            final student = filteredStudents[index];
+                            return _buildStudentCard(student);
+                          },
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -152,8 +167,10 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
   }
 
   // ── كارت عرض بيانات الطالب ──
-  Widget _buildStudentCard(Map<String, dynamic> student, int index) {
-    final bool isActive = student['isActive'];
+ // ── كارت عرض بيانات الطالب ──
+  Widget _buildStudentCard(Map<String, dynamic> student) {
+    final bool isActive = student['isActive'] ?? true;
+    final String name = student['name'] ?? 'بدون اسم';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -174,8 +191,7 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            Navigator.pushNamed(context, Routes.StudentDetailsScreen);
-            
+            Navigator.pushNamed(context, Routes.StudentDetailsScreen, arguments: student);
           },
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -186,7 +202,7 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
                   radius: 24,
                   backgroundColor: const Color(0xFFEDF7F7),
                   child: Text(
-                    student['name'].substring(0, 1),
+                    name.isNotEmpty ? name.substring(0, 1) : 'ط',
                     style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF005F61)),
                   ),
                 ),
@@ -197,7 +213,7 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        student['name'],
+                        name,
                         style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.textMain),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -209,7 +225,7 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
-                              student['stage'],
+                              student['stage'] ?? 'المرحلة غير محددة',
                               style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey.shade600),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
@@ -221,7 +237,11 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
                   ),
                 ),
                 // التحكم في الحالة (حظر / تفعيل)
-                
+                Switch(
+                  value: isActive,
+                  activeColor: const Color(0xFF005F61),
+                  onChanged: (val) => _toggleStudentStatus(student),
+                ),
               ],
             ),
           ),

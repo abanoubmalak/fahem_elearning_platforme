@@ -51,14 +51,14 @@ class HomeHeader extends StatelessWidget {
           ],
         ),
         // أيقونة التنبيهات مع اللون الذهبي التنبيهي
-        IconButton(
-          icon: const Icon(
-            Icons.notifications_none_rounded,
-            size: 28,
-            color: AppColors.primaryLight, // استخدام لون التنبيه الموحد
-          ),
-          onPressed: () {},
-        ),
+        // IconButton(
+        //   icon: const Icon(
+        //     Icons.notifications_none_rounded,
+        //     size: 28,
+        //     color: AppColors.primaryLight, // استخدام لون التنبيه الموحد
+        //   ),
+        //   onPressed: () {},
+        // ),
       ],
     );
   }

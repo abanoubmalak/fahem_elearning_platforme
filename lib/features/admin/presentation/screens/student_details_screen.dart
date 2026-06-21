@@ -82,9 +82,17 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
                           child: SizedBox(
                             height: 52,
                             child: ElevatedButton.icon(
-                              onPressed: () {
-                                Navigator.pushNamed(context, Routes.EditStudentScreen);
-                              },
+                              onPressed: () async {
+  final updated = await Navigator.pushNamed(
+    context,
+    Routes.EditStudentScreen,
+    arguments: _student,
+  );
+
+  if (updated == true && mounted) {
+    Navigator.pop(context, {'action': 'refresh'});
+  }
+},
                               icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
                               label: const Text('تعديل البيانات', style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                               style: ElevatedButton.styleFrom(
@@ -163,8 +171,7 @@ class _StudentDetailsScreenState extends State<StudentDetailsScreen> {
           const SizedBox(height: 4),
           Text(_student['stage'] ?? 'المرحلة غير محددة', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey.shade600)),
           const Divider(height: 30),
-          _buildInfoRow(Icons.phone_outlined, _student['phone'] ?? 'لا يوجد رقم هاتف'),
-          const SizedBox(height: 12),
+          
           _buildInfoRow(Icons.email_outlined, _student['email'] ?? 'لا يوجد بريد إلكتروني'),
         ],
       ),

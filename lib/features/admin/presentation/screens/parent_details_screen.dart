@@ -2,6 +2,8 @@
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 
 class ParentDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> parentData;
@@ -32,10 +34,23 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey))),
             TextButton(
-              onPressed: () {
-                Navigator.pop(ctx);
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم الحذف بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+              onPressed: () async {
+                Navigator.pop(ctx); // قفل نافذة التأكيد أولاً
+
+                final error = await context.read<AdminCubit>().deleteParent(_parent['id']);
+
+                if (!mounted) return;
+
+                if (error == null) {
+                  Navigator.pop(context, {'action': 'delete', 'id': _parent['id']});
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('تم الحذف بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(error, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                  );
+                }
               },
               child: const Text('حذف نهائياً', style: TextStyle(fontFamily: 'Cairo', color: Colors.redAccent, fontWeight: FontWeight.bold)),
             ),
@@ -91,8 +106,17 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                           child: SizedBox(
                             height: 52,
                             child: ElevatedButton.icon(
-                              onPressed: () => Navigator.pushNamed(context, Routes.EditParentScreen, arguments: _parent),
-                              icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
+onPressed: () async {
+  final updated = await Navigator.pushNamed(
+    context,
+    Routes.EditParentScreen,
+    arguments: _parent,
+  );
+
+  if (updated != null && updated is Map<String, dynamic> && mounted) {
+    setState(() => _parent = updated);
+  }
+},                              icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
                               label: const Text('تعديل البيانات', style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                               style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
                             ),

@@ -1,6 +1,8 @@
 // lib/features/admin/presentation/screens/parents/edit_parent_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 
 class EditParentScreen extends StatefulWidget {
   final Map<String, dynamic> parentData;
@@ -18,8 +20,8 @@ class _EditParentScreenState extends State<EditParentScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.parentData['name']);
-    _emailController = TextEditingController(text: widget.parentData['email']);
+    _nameController = TextEditingController(text: widget.parentData['name'] ?? '');
+    _emailController = TextEditingController(text: widget.parentData['email'] ?? '');
   }
 
   @override
@@ -29,10 +31,30 @@ class _EditParentScreenState extends State<EditParentScreen> {
     super.dispose();
   }
 
-  void _saveChanges() {
+  void _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث بيانات ولي الأمر بنجاح!', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF27AE60)));
+
+    final updatedData = {
+      'name': _nameController.text.trim(),
+      'email': _emailController.text.trim(),
+    };
+
+    final error = await context.read<AdminCubit>().updateParentData(
+      parentId: widget.parentData['id'],
+      parentData: updatedData,
+    );
+
+    if (!mounted) return;
+
+    if (error == null) {
+      Navigator.pop(context, {
+        ...widget.parentData,
+        ...updatedData,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث بيانات ولي الأمر بنجاح!', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF27AE60)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
+    }
   }
 
   @override

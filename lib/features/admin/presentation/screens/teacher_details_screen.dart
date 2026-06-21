@@ -33,16 +33,33 @@ class TeacherDetailsScreen extends StatefulWidget {
 class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
   late Map<String, dynamic> _teacher;
   late List<AssignedSubject> _assignedSubjects;
+@override
+void initState() {
+  super.initState();
 
-  @override
-  void initState() {
-    super.initState();
-    _teacher = Map<String, dynamic>.from(widget.teacherData);
-    
-    // استخراج المواد (في التطبيق الحقيقي ستأتي من الـ API)
-    // هنا نفترض أنها ممررة كقائمة من AssignedSubject
-    _assignedSubjects = _teacher['subjects'] ?? [];
-  }
+  _teacher = Map<String, dynamic>.from(widget.teacherData);
+
+  final courses = List<Map<String, dynamic>>.from(
+    _teacher['assignedCourses'] ?? [],
+  );
+
+  const reverseSubjectCodes = {
+    'arabic': 'لغة عربية',
+    'english': 'لغة إنجليزية',
+    'math': 'رياضيات',
+    'sci': 'علوم',
+    'social': 'دراسات اجتماعية',
+  };
+
+  _assignedSubjects = courses.map((course) {
+    return AssignedSubject(
+      subject: reverseSubjectCodes[course['subject']] ??
+          course['subject'],
+      stage: course['stage'] ?? '',
+      term: course['term'] ?? '',
+    );
+  }).toList();
+}
 
   // ── دالة تأكيد الحذف ──
   void _confirmDelete() {
@@ -116,10 +133,17 @@ class _TeacherDetailsScreenState extends State<TeacherDetailsScreen> {
                           child: SizedBox(
                             height: 52,
                             child: ElevatedButton.icon(
-                              onPressed: ()  {
-                                Navigator.pushNamed(context, Routes.EditTeacherScreen);
-                                
-                              },
+                              onPressed: () async {
+  final updated = await Navigator.pushNamed(
+    context,
+    Routes.EditTeacherScreen,
+    arguments: _teacher,
+  );
+
+  if (updated == true && mounted) {
+    Navigator.pop(context, {'action': 'refresh'});
+  }
+},
                               icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
                               label: const Text('تعديل البيانات', style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                               style: ElevatedButton.styleFrom(

@@ -36,7 +36,7 @@ class _PaymentCheckoutScreenState extends State<PaymentCheckoutScreen> {
         onCompleted: () {
           if (Navigator.canPop(dialogContext)) Navigator.of(dialogContext).pop(); 
           
-          parentCubit.paySubscription(_selectedChildId!);
+          parentCubit.paySubscription(_selectedChildId!, widget.packageAmount);
           
           if (mounted) {
             setState(() {

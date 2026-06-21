@@ -169,4 +169,13 @@ class _SignUpScreen extends State<SignUpScreen> with SingleTickerProviderStateMi
       ),
     );
   }
+
+  @override
+void dispose() {
+  _nameController.dispose();
+  _emailController.dispose();
+  _passwordController.dispose();
+  _confirmPasswordController.dispose();
+  super.dispose();
+}
 }

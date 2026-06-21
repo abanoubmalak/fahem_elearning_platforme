@@ -160,13 +160,18 @@ class AppRouter {
       case Routes.ContactTeachersScreen:
         return MaterialPageRoute(builder: (_)=> const ContactTeachersScreen());
 
-      case Routes.ChatScreen: 
-        return MaterialPageRoute(
-          builder: (_) => ChatScreen(
-            teacherName: args?['teacherName'] as String? ?? 'المعلم',
-            subject: args?['subject'] as String? ?? 'المادة',
-          ),
-        );
+     case Routes.ChatScreen:
+  // استخراج البيانات مباشرة من إعدادات المسار لتجنب خطأ التعريف
+  final args = settings.arguments as Map<String, dynamic>;
+  
+  return MaterialPageRoute(
+    builder: (_) => ChatScreen(
+      teacherId: args['teacherId'],     
+      teacherName: args['teacherName'], 
+      subject: args['subject'],         
+      studentName: args['studentName'], 
+    ),
+  );
 
       case Routes.PerformanceScreen:
         return MaterialPageRoute(builder: (_)=> const PerformanceScreen());
@@ -325,10 +330,8 @@ class AppRouter {
 
       case Routes.StudentDetailsScreen:
         return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: StudentDetailsScreen(studentData: args ?? sampleStudentData)));
-
-      case Routes.AdminTreasuryScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
-
+case Routes.AdminTreasuryScreen:
+  return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
       case Routes.AdminParentsManagementScreen:
         return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminParentsManagementScreen()));
 
@@ -337,6 +340,11 @@ class AppRouter {
 
       case Routes.EditParentScreen:
         return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: EditParentScreen(parentData: args ?? {})));
+
+      case Routes.AdminTreasuryScreen:
+  return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
+
+
 
       default:
         return MaterialPageRoute(

@@ -3,6 +3,8 @@ import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fahem/core/routing/routes.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -82,11 +84,47 @@ class AdminDashboardScreen extends StatelessWidget {
                       gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft),
                       borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
                     ),
-                    child: const SafeArea(
-                      child: Center(
-                        child: Text('لوحة تحكم الإدارة', style: TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
-                      ),
-                    ),
+                    child: SafeArea(
+  child: Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 16),
+    child: Row(
+      children: [
+
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.15),
+            shape: BoxShape.circle,
+          ),
+          child: IconButton(
+            onPressed: () => _logout(context),
+            icon: const Icon(
+              Icons.logout_rounded,
+              color: Colors.white,
+              size: 22,
+            ),
+            tooltip: 'تسجيل الخروج',
+          ),
+        ),
+
+        const Spacer(),
+
+        const Text(
+          'لوحة تحكم الإدارة',
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+
+        const Spacer(),
+
+        const SizedBox(width: 48), // للمحافظة على التوسيط
+      ],
+    ),
+  ),
+),
                   ),
                 ),
               ],
@@ -100,6 +138,70 @@ class AdminDashboardScreen extends StatelessWidget {
   // =========================================================
   // 🎨 تصميمات الكروت الجمالية
   // =========================================================
+
+
+
+
+void _logout(BuildContext context) {
+  showDialog(
+    context: context,
+    builder: (ctx) => Directionality(
+      textDirection: TextDirection.rtl,
+      child: AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(18),
+        ),
+        title: const Text(
+          'تسجيل الخروج',
+          style: TextStyle(
+            fontFamily: 'Cairo',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'هل أنت متأكد أنك تريد تسجيل الخروج من حساب الإدارة؟',
+          style: TextStyle(fontFamily: 'Cairo'),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text(
+              'إلغاء',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                color: Colors.grey,
+              ),
+            ),
+          ),
+
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+
+              await FirebaseAuth.instance.signOut();
+
+              Navigator.pushNamedAndRemoveUntil(
+                context,
+                Routes.loginScreen,
+                (route) => false,
+              );
+            },
+            child: const Text(
+              'خروج',
+              style: TextStyle(
+                fontFamily: 'Cairo',
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+
 
   // 1. الكارت الرئيسي لأرباح المنصة (تصميم مميز)
   Widget _buildMainEarningsCard(double amount) {

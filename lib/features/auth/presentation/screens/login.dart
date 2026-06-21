@@ -7,6 +7,7 @@ import "package:fahem/features/auth/presentation/cubit/auth_state.dart";
 import "package:flutter/gestures.dart";
 import "package:flutter/material.dart";
 import "package:flutter_bloc/flutter_bloc.dart";
+import 'package:url_launcher/url_launcher.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -184,12 +185,24 @@ class _LoginScreen extends State<LoginScreen> with SingleTickerProviderStateMixi
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.forum, color: AppColors.primaryTeal, size: 35),
-                          onPressed: () {
-                            // وظيفة الدعم الفني المستقبلية
-                          },
-                        ),
+                        
+IconButton(
+  icon: const Icon(
+    Icons.forum,
+    color: AppColors.primaryTeal,
+    size: 35,
+  ),
+  onPressed: () async {
+    final Uri whatsappUrl = Uri.parse(
+      'https://wa.me/201001274450?text=مرحباً، أحتاج إلى المساعدة'
+    );
+
+    await launchUrl(
+      whatsappUrl,
+      mode: LaunchMode.externalApplication,
+    );
+  },
+),
                       ],
                     ),
 

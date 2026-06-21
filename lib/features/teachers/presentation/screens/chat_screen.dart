@@ -1,17 +1,21 @@
 // lib/features/teachers/presentation/screens/chat_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 استيراد المصادقة للحصول على الـ UID الحقيقي
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
 class ChatScreen extends StatefulWidget {
+  final String teacherId;
   final String teacherName;
   final String subject;
+  final String studentName;
 
   const ChatScreen({
     super.key,
+    required this.teacherId,
     required this.teacherName,
     required this.subject,
+    required this.studentName,
   });
 
   @override
@@ -21,35 +25,22 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
-  // 👈 المتغيرات المنطقية
-  late String _chatRoomId;
 
-  @override
-  void initState() {
-    super.initState();
-    // 💎 منطق ذكي لإنشاء معرف الغرفة:
-    // نأخذ الـ UID الخاص بالطالب + اسم المعلم، لضمان تفرّد المحادثة
-    final String studentUid = FirebaseAuth.instance.currentUser?.uid ?? 'unknown_student';
-    _chatRoomId = "${studentUid}_${widget.teacherName.replaceAll(' ', '_')}";
-  }
-
-  // دالة إرسال الرسالة وحفظها في الفايربيز حياً
+  // دالة الإرسال المتوافقة مع هيكل database_seeder.dart
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
     final messageText = _messageController.text.trim();
     _messageController.clear();
 
-    // إضافة الرسالة في كوليكشن فرعي داخل غرفة المحادثة
-    await FirebaseFirestore.instance
-        .collection('chats')
-        .doc(_chatRoomId)
-        .collection('messages')
-        .add({
-      'text': messageText,
-      'isMe': true, 
-      'timestamp': FieldValue.serverTimestamp(), 
+    await FirebaseFirestore.instance.collection('teacher_questions').add({
+      'studentId': FirebaseAuth.instance.currentUser?.uid ?? '',
+      'teacherId': widget.teacherId,
+      'studentName': widget.studentName,
+      'question': messageText,
+      'reply': '',
+      'isReplied': false,
+      'createdAt': FieldValue.serverTimestamp(), // 👈 حفظ الوقت بصيغة الفايربيز المباشرة
     });
 
     _scrollToBottom();
@@ -59,7 +50,7 @@ class _ChatScreenState extends State<ChatScreen> {
     Future.delayed(const Duration(milliseconds: 200), () {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
+          _scrollController.position.maxScrollExtent + 100,
           duration: const Duration(milliseconds: 300),
           curve: Curves.easeOut,
         );
@@ -76,7 +67,8 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // ⚠️ لا تغيير في التصميم أبداً ⚠️
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid ?? '';
+
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       appBar: AppBar(
@@ -106,7 +98,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       style: const TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
                     ),
                     Text(
-                      'معلم ${widget.subject} • نشط الآن',
+                      'معلم ${widget.subject} ',
                       style: const TextStyle(fontFamily: 'Cairo', fontSize: 10, color: Colors.white70),
                     ),
                   ],
@@ -123,11 +115,10 @@ class _ChatScreenState extends State<ChatScreen> {
             Expanded(
               child: StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
-                    .collection('chats')
-                    .doc(_chatRoomId)
-                    .collection('messages')
-                    .orderBy('timestamp', descending: false)
-                    .snapshots(),
+                    .collection('teacher_questions')
+                    .where('studentId', isEqualTo: currentUserId)
+                    .where('teacherId', isEqualTo: widget.teacherId)
+                    .snapshots(), // 👈 جلب مباشر بدون orderBy لتجنب الحاجة لـ Composite Index
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
@@ -135,13 +126,21 @@ class _ChatScreenState extends State<ChatScreen> {
                   if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                     return Center(
                       child: Text(
-                        'ابدأ المحادثة الآن مع معلمك المتميز! 💬',
+                        'ابدأ بطرح أسئلتك على المعلم الآن! 💬',
                         style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey[500]),
                       ),
                     );
                   }
 
+                  // 👈 ترتيب الرسائل برمجياً في الذاكرة بناءً على الوقت لضمان دقة التسلسل
                   final messageDocs = snapshot.data!.docs;
+                  messageDocs.sort((a, b) {
+                    final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                    final bTime = (b.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
+                    if (aTime == null || bTime == null) return 0;
+                    return aTime.compareTo(bTime);
+                  });
+
                   WidgetsBinding.instance.addPostFrameCallback((_) => _scrollToBottom());
 
                   return ListView.builder(
@@ -151,15 +150,32 @@ class _ChatScreenState extends State<ChatScreen> {
                     itemCount: messageDocs.length,
                     itemBuilder: (context, index) {
                       final docData = messageDocs[index].data() as Map<String, dynamic>;
-                      final Timestamp? timestamp = docData['timestamp'] as Timestamp?;
+                      final Timestamp? timestamp = docData['createdAt'] as Timestamp?;
                       final String timeString = timestamp != null 
                           ? "${timestamp.toDate().hour}:${timestamp.toDate().minute.toString().padLeft(2, '0')}" 
                           : "الآن";
 
-                      return _buildMessageBubble(
-                        text: docData['text'] ?? '',
-                        isMe: docData['isMe'] ?? true,
-                        time: timeString,
+                      final String questionText = docData['question'] ?? '';
+                      final String replyText = docData['reply'] ?? '';
+                      final bool isReplied = docData['isReplied'] ?? false;
+
+                      // بما أن كل Doc هو (سؤال وإجابة)، نعرضهما كفقاعتين متتابعتين
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          if (questionText.isNotEmpty)
+                            _buildMessageBubble(
+                              text: questionText,
+                              isMe: true, // الطالب (صاحب السؤال)
+                              time: timeString,
+                            ),
+                          if (isReplied && replyText.isNotEmpty)
+                            _buildMessageBubble(
+                              text: replyText,
+                              isMe: false, // المعلم (صاحب الرد)
+                              time: timeString,
+                            ),
+                        ],
                       );
                     },
                   );
@@ -171,7 +187,7 @@ class _ChatScreenState extends State<ChatScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 boxShadow: [
-                  BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, -4)),
+                  BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 10, offset: const Offset(0, -4)),
                 ],
               ),
               child: Row(
@@ -226,7 +242,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageBubble({required String text, required bool isMe, required String time}) {
     return Align(
-      alignment: isMe ? Alignment.centerLeft : Alignment.centerRight,
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft, // تم ضبط المحاذاة للغة العربية
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),
@@ -236,8 +252,8 @@ class _ChatScreenState extends State<ChatScreen> {
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(16),
             topRight: const Radius.circular(16),
-            bottomLeft: isMe ? Radius.zero : const Radius.circular(16),
-            bottomRight: isMe ? const Radius.circular(16) : Radius.zero,
+            bottomLeft: isMe ? const Radius.circular(16) : Radius.zero,
+            bottomRight: isMe ? Radius.zero : const Radius.circular(16),
           ),
         ),
         child: Column(

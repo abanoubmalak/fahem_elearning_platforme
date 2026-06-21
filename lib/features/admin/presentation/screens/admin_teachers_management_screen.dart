@@ -72,6 +72,7 @@ class _AdminTeachersManagementScreenState extends State<AdminTeachersManagementS
 
   Widget _buildTeacherCard(Map<String, dynamic> teacher) {
     final bool isActive = teacher['isActive'] ?? true;
+     
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -104,7 +105,14 @@ class _AdminTeachersManagementScreenState extends State<AdminTeachersManagementS
                           Icon(Icons.menu_book_rounded, size: 14, color: Colors.grey.shade600),
                           const SizedBox(width: 4),
                           Expanded(
-                            child: Text(teacher['main_subject'] ?? 'لم تحدد المادة بعد', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                          child: Text(teacher['specialty'] ?? 'لم تحدد المادة بعد',style: TextStyle(
+    fontFamily: 'Cairo',
+    fontSize: 12,
+    color: Colors.grey.shade600,
+  ),
+  maxLines: 1,
+  overflow: TextOverflow.ellipsis,
+),
                           ),
                         ],
                       ),

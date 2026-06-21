@@ -168,9 +168,8 @@ class ParentCubit extends Cubit<ParentState> {
       rethrow;
     }
   }
-
-  // دالة دفع الاشتراك وتحديث الحالة حياً وتوثيق الفاتورة
-  Future<void> paySubscription(String childId) async {
+// دالة دفع الاشتراك وتحديث الحالة حياً وتوثيق الفاتورة
+  Future<void> paySubscription(String childId, double amount) async {
     final String? parentId = _auth.currentUser?.uid;
     if (parentId == null) return;
 
@@ -188,6 +187,10 @@ class ParentCubit extends Cubit<ParentState> {
       String termCode = term == 'الترم الأول' ? 't1' : 't2';
       String packageId = 'sci_${stageCode}_${termCode}';
 
+      // توزيع الربح بنفس نسبة المنصة/المعلم المعتمدة (ثلث للمنصة، ثلثين للمعلم)
+      final double platformShare = amount / 3;
+      final double teacherShare = amount - platformShare;
+
       WriteBatch batch = _firestore.batch();
       batch.update(_firestore.collection('students').doc(childId), {
         'unlockedPackages': FieldValue.arrayUnion([packageId]),
@@ -200,9 +203,9 @@ class ParentCubit extends Cubit<ParentState> {
         'studentId': childId,
         'packageId': packageId,
         'packageName': '$grade - $term',
-        'totalAmountPaid': 150.0,
-        'platformProfit': 50.0,
-        'teachersProfit': 100.0,
+        'totalAmountPaid': amount,
+        'platformProfit': platformShare,
+        'teachersProfit': teacherShare,
         'currency': 'EGP',
         'status': 'completed',
         'createdAt': FieldValue.serverTimestamp(),
@@ -212,8 +215,7 @@ class ParentCubit extends Cubit<ParentState> {
     } catch (e) {
       emit(ParentState(children: state.children, errorMessage: 'فشلت عملية السداد الرقمي: $e'));
     }
-  }
-
+  }   
   // دالة إلغاء ربط حساب الابن سحابياً بالكامل
   Future<void> removeChild(String childId) async {
     final String? parentId = _auth.currentUser?.uid;

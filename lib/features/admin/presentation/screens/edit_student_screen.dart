@@ -1,7 +1,10 @@
 // lib/features/admin/presentation/screens/students/edit_student_screen.dart
 import 'package:fahem/core/constants/colors.dart';
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 
 class EditStudentScreen extends StatefulWidget {
   final Map<String, dynamic> studentData;
@@ -18,7 +21,6 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
   // ── Controllers ──
   late TextEditingController _nameController;
   late TextEditingController _emailController;
-  late TextEditingController _phoneController;
   String? _selectedStage;
 
   final List<String> _stages = [
@@ -30,9 +32,8 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.studentData['name']);
-    _emailController = TextEditingController(text: widget.studentData['email']);
-    _phoneController = TextEditingController(text: widget.studentData['phone']);
+    _nameController = TextEditingController(text: widget.studentData['name'] ?? '');
+    _emailController = TextEditingController(text: widget.studentData['email'] ?? '');
     _selectedStage = widget.studentData['stage'];
   }
 
@@ -40,27 +41,34 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _phoneController.dispose();
     super.dispose();
   }
 
-  void _saveChanges() {
+  void _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
     if (_selectedStage == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى اختيار المرحلة الدراسية'), backgroundColor: Colors.redAccent));
       return;
     }
 
     final updatedData = {
-      ...widget.studentData,
       'name': _nameController.text.trim(),
       'email': _emailController.text.trim(),
-      'phone': _phoneController.text.trim(),
       'stage': _selectedStage,
     };
 
-    Navigator.pop(context, updatedData);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث البيانات بنجاح!'), backgroundColor: Color(0xFF005F61)));
+    final error = await context.read<AdminCubit>().updateStudentData(
+      studentId: widget.studentData['id'],
+      studentData: updatedData,
+    );
+
+    if (!mounted) return;
+
+    if (error == null) {
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم تحديث البيانات بنجاح!'), backgroundColor: Color(0xFF005F61)));
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error), backgroundColor: Colors.redAccent));
+    }
   }
 
   @override
@@ -85,15 +93,9 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
                       const SizedBox(height: 16),
                       _buildTextField(label: 'البريد الإلكتروني', controller: _emailController, icon: Icons.email_rounded, keyboardType: TextInputType.emailAddress),
                       const SizedBox(height: 16),
-                      _buildTextField(label: 'رقم الموبايل', controller: _phoneController, icon: Icons.phone_android_rounded, keyboardType: TextInputType.phone, inputFormatters: [FilteringTextInputFormatter.digitsOnly]),
                       const SizedBox(height: 16),
-                      DropdownButtonFormField<String>(
-                        value: _selectedStage,
-                        decoration: _inputDecoration('المرحلة الدراسية', Icons.school_rounded),
-                        items: _stages.map((s) => DropdownMenuItem(value: s, child: Text(s, style: const TextStyle(fontFamily: 'Cairo')))).toList(),
-                        onChanged: (val) => setState(() => _selectedStage = val),
-                      ),
-                      const SizedBox(height: 40),
+                     
+                      
                       SizedBox(
                         width: double.infinity, height: 52,
                         child: ElevatedButton.icon(

@@ -93,13 +93,13 @@ class _AdminParentsManagementScreenState extends State<AdminParentsManagementScr
 
         return Scaffold(
           backgroundColor: AppColors.scaffoldBackground,
-          floatingActionButton: FloatingActionButton.extended(
-            heroTag: "fab_parents_unique",
-            onPressed: _openAddParentBottomSheet,
-            backgroundColor: const Color(0xFF27AE60),
-            icon: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white),
-            label: const Text('إضافة ولي أمر', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
-          ),
+          // floatingActionButton: FloatingActionButton.extended(
+          //   heroTag: "fab_parents_unique",
+          //   onPressed: _openAddParentBottomSheet,
+          //   backgroundColor: const Color(0xFF27AE60),
+          //   icon: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white),
+          //   label: const Text('إضافة ولي أمر', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
+          // ),
           body: Directionality(
             textDirection: TextDirection.rtl,
             child: Stack(
