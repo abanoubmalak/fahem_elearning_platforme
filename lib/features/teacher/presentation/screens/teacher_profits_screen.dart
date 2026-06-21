@@ -38,7 +38,7 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
                   controller: amountController,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold),
-                  decoration: InputDecoration(hintText: 'المبلغ المطلوب سحبه', prefixIcon: const Icon(Icons.attach_money_rounded, color: Color(0xFF005F61)), filled: true, fillColor: const Color(0xFFF8FAFC), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
+                  decoration: InputDecoration(hintText: 'المبلغ المطلوب سحبه',  filled: true, fillColor: const Color(0xFFF8FAFC), border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none)),
                 ),
                 const SizedBox(height: 20),
                 const Text('طريقة الاستلام', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, fontWeight: FontWeight.bold)),

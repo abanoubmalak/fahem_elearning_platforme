@@ -10,7 +10,7 @@ import 'auth_state.dart';
 class AuthCubit extends Cubit<AuthState> {
   final AuthService _authService = AuthService();
   final EmailService _emailService = EmailService();
-  
+
   AuthCubit() : super(AuthInitial());
 
   String? tempName;
@@ -19,14 +19,12 @@ class AuthCubit extends Cubit<AuthState> {
   String? tempForgotEmail;
   String? tempForgotOtp;
 
-  // حفظ البيانات بالذاكرة مؤقتاً بين شاشات التسجيل
   void saveBasicInfo({required String name, required String email, required String password}) {
     tempName = name;
     tempEmail = email;
     tempPassword = password;
   }
 
-  // دالة إتمام التسجيل وتوليد الـ OTP بعد إدخال الـ Role والبيانات الدراسية
   Future<void> completeRegistration({required String role, String? grade, String? term}) async {
     emit(AuthLoading());
     try {
@@ -35,139 +33,217 @@ class AuthCubit extends Cubit<AuthState> {
         return;
       }
 
-      print('=== [AuthCubit] جاري بدء التسجيل السحابي للمستخدم: $tempName ===');
-      String generatedOtp = (1000 + Random().nextInt(9000)).toString(); // كود رباعي موحد
+      final String normalizedEmail = tempEmail!.trim().toLowerCase();
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-      // 1. إنشاء الحساب في Authentication وجدول users
-      var user = await _authService.signUpUser(
-        name: tempName!,
-        email: tempEmail!,
-        password: tempPassword!,
-        role: role,
-      ).timeout(const Duration(seconds: 8)); 
+      // ✅ توليد الـ OTP قبل أي عملية
+      String generatedOtp = (1000 + Random().nextInt(9000)).toString();
 
-      if (user != null) {
-        final firestore = FirebaseFirestore.instance;
-        
-        if (role == 'student') {
-           String stageCode = 'g1';
-           if (grade == 'الصف الثاني الإعدادي') stageCode = 'g2';
-           if (grade == 'الصف الثالث الإعدادي') stageCode = 'g3';
-           String termCode = term == 'الترم الأول' ? 't1' : 't2';
-           String freePackage = 'sci_${stageCode}_${termCode}'; // فتح العلوم كعينة تجريبية
+      User? user;
 
-           await firestore.collection('students').doc(user.uid).set({
-             'name': tempName!.trim(),
-             'email': tempEmail!.trim().toLowerCase(),
-             'stage': grade ?? 'الصف الأول الإعدادي',
-             'term': term ?? 'الترم الثاني',
-             'isActive': false, // لن يتفعل إلا بعد إدخال الـ OTP
-             'linkCode': 'FAHEM-${user.uid.substring(0, 5).toUpperCase()}',
-             'unlockedPackages': [freePackage], 
-             'parentIds': [],
-             'createdAt': FieldValue.serverTimestamp(),
-           });
-        } else if (role == 'parent') {
-           await firestore.collection('parents').doc(user.uid).set({
-             'name': tempName!.trim(),
-             'email': tempEmail!.trim().toLowerCase(),
-             'isActive': false,
-             'linkedStudents': [],
-             'createdAt': FieldValue.serverTimestamp(),
-           });
+      try {
+        user = await _authService.signUpUser(
+          name: tempName!,
+          email: tempEmail!,
+          password: tempPassword!,
+          role: role,
+        ).timeout(const Duration(seconds: 8));
+      } on FirebaseAuthException catch (authError) {
+        if (authError.code != 'email-already-in-use') rethrow;
+
+        final existingDocs = await firestore
+            .collection('users')
+            .where('email', isEqualTo: normalizedEmail)
+            .limit(1)
+            .get();
+
+        if (existingDocs.docs.isEmpty) {
+          emit(AuthFailure('هذا البريد الإلكتروني مستخدم بالفعل، يمكنك تسجيل الدخول أو استخدام "نسيت كلمة المرور" 👥'));
+          return;
         }
 
-        // 3. إرسال بريد التحقق الرقمي عبر خدمة EmailJS
+        final existingData = existingDocs.docs.first.data();
+        final bool isActiveAccount =
+            (existingData['is_active'] == true) || (existingData['isActive'] == true);
+
+        if (isActiveAccount) {
+          emit(AuthFailure('هذا البريد الإلكتروني مسجّل ومُفعّل بالفعل، يمكنك تسجيل الدخول مباشرة 👤'));
+          return;
+        }
+
+        try {
+          final pendingSignIn = await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: tempEmail!.trim(),
+            password: tempPassword!,
+          );
+          final String staleUid = pendingSignIn.user!.uid;
+
+          try {
+            await firestore.collection('users').doc(staleUid).delete();
+            await firestore.collection('students').doc(staleUid).delete();
+            await firestore.collection('parents').doc(staleUid).delete();
+          } catch (_) {}
+
+          await pendingSignIn.user!.delete();
+
+          user = await _authService.signUpUser(
+            name: tempName!,
+            email: tempEmail!,
+            password: tempPassword!,
+            role: role,
+          ).timeout(const Duration(seconds: 8));
+        } on FirebaseAuthException {
+          emit(AuthFailure(
+            'يوجد حساب غير مكتمل بهذا البريد من محاولة سابقة. اكتب نفس كلمة المرور التي استخدمتها وقت التسجيل أول مرة لإكمال العملية، أو استخدم "نسيت كلمة المرور" من شاشة تسجيل الدخول.',
+          ));
+          return;
+        }
+      }
+
+      if (user != null) {
+        // ✅ حفظ الـ OTP في Firestore عشان verifyOTP يقدر يتحقق منه
+        await firestore.collection('users').doc(user.uid).update({
+          'otp_code': generatedOtp,
+          'otp_created_at': FieldValue.serverTimestamp(),
+        });
+
+        if (role == 'student') {
+          String stageCode = 'g1';
+          if (grade == 'الصف الثاني الإعدادي') stageCode = 'g2';
+          if (grade == 'الصف الثالث الإعدادي') stageCode = 'g3';
+          String termCode = term == 'الترم الأول' ? 't1' : 't2';
+          String freePackage = 'sci_${stageCode}_${termCode}';
+
+          await firestore.collection('students').doc(user.uid).set({
+            'name': tempName!.trim(),
+            'email': tempEmail!.trim().toLowerCase(),
+            'stage': grade ?? 'الصف الأول الإعدادي',
+            'term': term ?? 'الترم الثاني',
+            'isActive': false,
+            'linkCode': 'FAHEM-${user.uid.substring(0, 5).toUpperCase()}',
+            'unlockedPackages': [freePackage],
+            'parentIds': [],
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        } else if (role == 'parent') {
+          await firestore.collection('parents').doc(user.uid).set({
+            'name': tempName!.trim(),
+            'email': tempEmail!.trim().toLowerCase(),
+            'isActive': false,
+            'linkedStudents': [],
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        }
+
         await _emailService.sendOTPEmail(
-          targetEmail: tempEmail!, 
-          userName: tempName!, 
-          otpCode: generatedOtp
+          targetEmail: tempEmail!,
+          userName: tempName!,
+          otpCode: generatedOtp,
         );
-        
+
         emit(AuthOTPSent(uid: user.uid, email: tempEmail!));
       }
     } catch (e) {
       print('=== [AuthCubit Error 🚨] فشل إتمام الحساب: $e ===');
-      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); 
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
     }
   }
 
-  // 💎 تحديث منطق التحقق من كود الـ OTP لحساب جديد والتوجيه الذكي الموحد 💎
+  // ✅ verifyOTP يجيب الكود من Firestore ويقارنه بدل ما يعتمد على AuthService فقط
   Future<void> verifyOTP(String uid, String enteredCode) async {
     emit(AuthLoading());
     try {
-      // 1. فحص صحة الكود عبر السيرفر الخاص بك
-      bool isCorrect = await _authService.verifyUserOTP(uid, enteredCode);
-      
-      if (isCorrect) {
-        final FirebaseFirestore firestore = FirebaseFirestore.instance;
+      final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-        // 2. جلب مستند المستخدم الأساسي لمعرفة الـ role الفعلي سحابياً
-        DocumentSnapshot userDoc = await firestore.collection('users').doc(uid).get();
-        if (!userDoc.exists) {
-          emit(AuthFailure('بيانات الحساب غير موجودة بقاعدة البيانات ❌'));
-          return;
-        }
-
-        final userData = userDoc.data() as Map<String, dynamic>;
-        final String userRole = userData['role'] ?? 'student'; // استخراج الدور الحقيقي الحركي
-
-        // 3. تحديث تزامني موحد لحالة التفعيل (Activation) لمنع أي تضارب بين الحقول والتعارض البصري
-        WriteBatch batch = firestore.batch();
-
-        // تحديث جدول الـ users الموحد (دعم الحقلين معاً لتأمين الاستقرار البصري)
-        batch.update(firestore.collection('users').doc(uid), {
-          'is_active': true,
-          'isActive': true,
-        });
-
-        // تحديث الجدول الفرعي المخصص حسب الصلاحية الفعلية
-        if (userRole == 'parent') {
-          batch.update(firestore.collection('parents').doc(uid), {
-            'isActive': true,
-            'is_active': true,
-          });
-        } else if (userRole == 'student') {
-          batch.update(firestore.collection('students').doc(uid), {
-            'isActive': true,
-            'is_active': true,
-          });
-        }
-
-        // إتمام الحفظ السحابي دفعة واحدة بنظام الـ Batch
-        await batch.commit();
-
-        // 4. بث حالة النجاح مع تمرير الـ role الحقيقي للتوجيه السليم فوراً
-        emit(AuthSuccess(role: userRole));
-      } else {
-        emit(AuthFailure('كود التحقق الرقمي الذي أدخلته غير صحيح ❌'));
+      DocumentSnapshot userDoc = await firestore.collection('users').doc(uid).get();
+      if (!userDoc.exists) {
+        emit(AuthFailure('بيانات الحساب غير موجودة بقاعدة البيانات ❌'));
+        return;
       }
-    } catch (e) { 
-      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); 
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final String? storedOtp = userData['otp_code'];
+      final String userRole = userData['role'] ?? 'student';
+
+      if (storedOtp == null || storedOtp.trim() != enteredCode.trim()) {
+        emit(AuthFailure('كود التحقق الرقمي الذي أدخلته غير صحيح ❌'));
+        return;
+      }
+
+      // ✅ الكود صح — نفعّل الحساب ونمسح الكود القديم
+      WriteBatch batch = firestore.batch();
+
+      batch.update(firestore.collection('users').doc(uid), {
+        'is_active': true,
+        'isActive': true,
+        'otp_code': FieldValue.delete(), // مسح الكود بعد الاستخدام للأمان
+        'otp_created_at': FieldValue.delete(),
+      });
+
+      if (userRole == 'parent') {
+        batch.update(firestore.collection('parents').doc(uid), {
+          'isActive': true,
+          'is_active': true,
+        });
+      } else if (userRole == 'student') {
+        batch.update(firestore.collection('students').doc(uid), {
+          'isActive': true,
+          'is_active': true,
+        });
+      }
+
+      await batch.commit();
+
+      emit(AuthSuccess(role: userRole));
+    } catch (e) {
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
     }
   }
 
-  // تسجيل الدخول بالبريد وكلمة المرور
   Future<void> loginWithEmailAndPassword(String email, String password) async {
     emit(AuthLoading());
     try {
       String? role = await _authService.loginUser(email: email, password: password);
-      if (role != null) {
-        emit(AuthSuccess(role: role)); 
-      } else {
+      if (role == null) {
         emit(AuthFailure('تعذر جلب صلاحيات المستخدم من الخادم ⚠️'));
+        return;
       }
-    } catch (e) { 
-      emit(AuthFailure(_mapExceptionToFriendlyMessage(e))); 
+
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid != null) {
+        final doc = await FirebaseFirestore.instance.collection('users').doc(uid).get();
+        final data = doc.data() as Map<String, dynamic>?;
+        final bool isActive = (data?['is_active'] == true) || (data?['isActive'] == true);
+
+        if (!isActive) {
+          // ✅ إرسال كود OTP جديد للمستخدم الغير مفعّل بدل ما نبعته فاضي
+          final String newOtp = (1000 + Random().nextInt(9000)).toString();
+          await FirebaseFirestore.instance.collection('users').doc(uid).update({
+            'otp_code': newOtp,
+            'otp_created_at': FieldValue.serverTimestamp(),
+          });
+
+          final String userName = data?['name'] ?? 'مستخدم';
+          await _emailService.sendOTPEmail(
+            targetEmail: email.trim(),
+            userName: userName,
+            otpCode: newOtp,
+          );
+
+          emit(AuthOTPSent(uid: uid, email: email));
+          return;
+        }
+      }
+
+      emit(AuthSuccess(role: role));
+    } catch (e) {
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
     }
   }
 
-  // إرسال كود استعادة كلمة المرور بالفحص الاستباقي الصارم
   Future<void> sendForgotPasswordOtp(String email) async {
     emit(AuthLoading());
     try {
-      print('=== [AuthCubit] بدء الفحص الاستباقي للبريد: $email ===');
-      
       bool exists = await _authService.isEmailRegistered(email);
       if (!exists) {
         emit(AuthFailure('هذا البريد الإلكتروني غير مسجل لدينا في المنظومة ❌'));
@@ -175,37 +251,29 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       tempForgotEmail = email.trim().toLowerCase();
-      tempForgotOtp = (1000 + Random().nextInt(9000)).toString(); // توليد 4 أرقام بدقة
+      tempForgotOtp = (1000 + Random().nextInt(9000)).toString();
 
-      bool isEmailSent = await _emailService.sendOTPEmail(
+      await _emailService.sendOTPEmail(
         targetEmail: tempForgotEmail!,
         userName: "مستخدم فاهم",
         otpCode: tempForgotOtp!,
       );
 
-      if (isEmailSent) {
-        print('=== [AuthCubit] تم إرسال كود استعادة كلمة المرور بنجاح 🎉 ===');
-      } else {
-        print('=== [وضع المحاكاة الآمن]: الكود هو: $tempForgotOtp ===');
-      }
-      
-      emit(AuthForgotOTPSent(tempForgotEmail!)); 
+      emit(AuthForgotOTPSent(tempForgotEmail!));
     } catch (e) {
       emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
     }
   }
 
-  // التحقق من كود استعادة الباسورد الرباعي الجديد
   void verifyForgotPasswordOtp(String enteredCode) {
     emit(AuthLoading());
     if (enteredCode == tempForgotOtp) {
       emit(AuthForgotOTPVerified());
     } else {
-      emit(AuthFailure('كود التحقق المكون من 4 أرقام غير صحيح ❌')); 
+      emit(AuthFailure('كود التحقق المكون من 4 أرقام غير صحيح ❌'));
     }
   }
 
-  // حفظ وتحديث كلمة المرور الجديدة حياً في قاعدة البيانات
   Future<void> resetUserPassword(String newPassword) async {
     emit(AuthLoading());
     try {
@@ -213,23 +281,66 @@ class AuthCubit extends Cubit<AuthState> {
         emit(AuthFailure('انتهت الجلسة الأمنية، يرجى إعادة كتابة البريد الإلكتروني.'));
         return;
       }
-
-      print('=== [AuthCubit 🔐] جاري استدعاء السيرفر لتحديث كلمة المرور للإيميل: $tempForgotEmail ===');
       await _authService.updatePasswordInFirestore(tempForgotEmail!, newPassword);
-      
-      print('=== [AuthCubit 🎉] تم تحديث كلمة المرور بنجاح في قاعدة البيانات ===');
-      emit(AuthResetPasswordSuccess()); 
+      emit(AuthResetPasswordSuccess());
     } catch (e) {
       emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
     }
   }
 
-  // الدالة المركزية لترجمة وتوطين الأخطاء
+  Future<void> sendPasswordResetLink(String email) async {
+    emit(AuthLoading());
+    try {
+      if (email.isEmpty) {
+        emit(AuthFailure('يرجى كتابة البريد الإلكتروني أولاً.'));
+        return;
+      }
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
+      emit(AuthResetPasswordSuccess());
+    } catch (e) {
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
+    }
+  }
+
+  Future<void> checkCurrentSession() async {
+    emit(AuthLoading());
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      emit(AuthInitial());
+      return;
+    }
+
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+
+      if (!doc.exists) {
+        emit(AuthInitial());
+        return;
+      }
+
+      final data = doc.data() as Map<String, dynamic>;
+      final bool isActive = (data['is_active'] == true) || (data['isActive'] == true);
+      final String role = data['role'] ?? 'student';
+
+      if (isActive) {
+        emit(AuthSuccess(role: role));
+      } else {
+        emit(AuthOTPSent(uid: currentUser.uid, email: currentUser.email ?? ''));
+      }
+    } catch (e) {
+      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
+    }
+  }
+
   String _mapExceptionToFriendlyMessage(Object e) {
     final errorStr = e.toString().toLowerCase();
-    
-    if (errorStr.contains('invalid-credential') || 
-        errorStr.contains('wrong-password') || 
+
+    if (errorStr.contains('invalid-credential') ||
+        errorStr.contains('wrong-password') ||
         errorStr.contains('user-not-found')) {
       return 'البريد الإلكتروني أو كلمة المرور غير صحيحة ❌';
     }
@@ -248,23 +359,27 @@ class AuthCubit extends Cubit<AuthState> {
     if (errorStr.contains('timeout')) {
       return 'انتهت مهلة الاتصال بالسيرفر، يرجى إعادة المحاولة مجدداً ⏳';
     }
-    
+
     return 'حدث خطأ غير متوقع، يرجى المحاولة لاحقاً.';
   }
 
-  // دالة نسيان كلمة المرور (الطريقة الرسمية لفايربيز)
-  Future<void> sendPasswordResetLink(String email) async {
-    emit(AuthLoading());
-    try {
-      if (email.isEmpty) {
-        emit(AuthFailure('يرجى كتابة البريد الإلكتروني أولاً.'));
-        return;
-      }
-      
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email.trim());
-      emit(AuthResetPasswordSuccess()); 
-    } catch (e) {
-      emit(AuthFailure(_mapExceptionToFriendlyMessage(e)));
-    }
-  }
+
+
+
+
+
+  Future<void> resendOTP(String uid, String email) async {
+  try {
+    final String newOtp = (1000 + Random().nextInt(9000)).toString();
+    await FirebaseFirestore.instance.collection('users').doc(uid).update({
+      'otp_code': newOtp,
+      'otp_created_at': FieldValue.serverTimestamp(),
+    });
+    await _emailService.sendOTPEmail(
+      targetEmail: email,
+      userName: 'مستخدم فاهم',
+      otpCode: newOtp,
+    );
+  } catch (_) {}
+}
 }

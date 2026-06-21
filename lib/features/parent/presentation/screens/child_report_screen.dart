@@ -22,21 +22,46 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
   bool _isLoading = true; // 👈 حارس حالة التحميل السحابي
 
   // 💎 ربط قائمة المواد بالـ IDs الرسمية المعتمدة بقاعدة بيانات فاهم
+  // ⚠️ الـ id هنا لازم يطابق بالظبط الـ id المستخدم في SubjectProvider
+  // (lib/core/utils/subject_provider.dart) عشان يطابق subjectId المخزن
+  // في student_progress، وكان قبل كده 'ara' بالغلط بدل 'ar'.
   static const List<Map<String, dynamic>> _subjectsTemplate = [
-    {'id': 'ara', 'subject': 'اللغة العربية', 'icon': Icons.menu_book_rounded, 'color': Color(0xFFEDF7F7)},
-    {'id': 'eng', 'subject': 'اللغة الإنجليزية', 'icon': Icons.g_translate_rounded, 'color': Color(0xFFFEF6E5)},
+    {'id': 'ar', 'subject': 'اللغة العربية', 'icon': Icons.menu_book_rounded, 'color': Color(0xFFEDF7F7)},
+    {'id': 'en', 'subject': 'اللغة الإنجليزية', 'icon': Icons.g_translate_rounded, 'color': Color(0xFFFEF6E5)},
     {'id': 'math', 'subject': 'الرياضيات', 'icon': Icons.calculate_outlined, 'color': Color(0xFFF1F5F9)},
     {'id': 'sci', 'subject': 'العلوم', 'icon': Icons.biotech_outlined, 'color': Color(0xFFEAFAF1)}, // sci متوافق مع السيرفر
     {'id': 'soc', 'subject': 'الدراسات الاجتماعية', 'icon': Icons.public_rounded, 'color': Color(0xFFFFEAEA)},
   ];
+
+  // 💎 نفس خريطة التحويل المستخدمة في StudentCubit و SubjectDetailsCubit
+  // عشان نطابق صيغة id المادة المخزّنة فعلياً داخل unlockedPackages في فايربيز.
+  // مثال: مادة اللغة العربية id داخلي = 'ar' لكن المخزن في فايربيز 'arabic'.
+  static const Map<String, String> _firestoreSubjectIdMap = {
+    'ar': 'arabic',
+  };
+
+  String _firestoreSubjectId(String localId) {
+    return _firestoreSubjectIdMap[localId] ?? localId;
+  }
+
+  String _stageCode(String? grade) {
+    if (grade == null) return 'g1';
+    if (grade.contains('الثاني الإعدادي')) return 'g2';
+    if (grade.contains('الثالث الإعدادي')) return 'g3';
+    return 'g1';
+  }
+
+  String _termCode(String? term) {
+    return term == 'الترم الأول' ? 't1' : 't2';
+  }
 
   @override
   void initState() {
     super.initState();
     if (widget.childrenData.isNotEmpty) {
       _selectedChild = widget.initialChild ?? widget.childrenData.first;
-      // تهيئة مبدئية مأمنة بنسبة صفر لمكافحة الأخطاء البصرية أثناء التحميل
-      _subjectData = _subjectsTemplate.map((s) => {...s, 'watchProgress': 0.0, 'quizScore': 0.0}).toList();
+      // تهيئة مبدئية مأمنة بقائمة فاضية لحد ما نجيب المواد المشترك فيها فعلياً
+      _subjectData = [];
       _loadLiveChildReport(_selectedChild!);
     } else {
       _isLoading = false;
@@ -44,17 +69,57 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
   }
 
   // 💎 دالة جلب تقارير أداء المواد التفصيلي الحقيقي للابن من الفايرستور
+  // 👈 تعرض فقط المواد المشترك فيها الطالب فعلياً (unlockedPackages) بدل كل المواد
   Future<void> _loadLiveChildReport(Map<String, dynamic> child) async {
     setState(() => _isLoading = true);
     try {
-      // جلب سجلات تقدم الطالب بالكامل المربوطة بمعرفه الفرعي
-      final QuerySnapshot progressSnap = await FirebaseFirestore.instance
-          .collection('student_progress')
-          .where('studentId', isEqualTo: child['id'])
+      // 1. جلب بيانات الطالب نفسه عشان نعرف صفه وترمه ومواده المشترك فيها
+      final String studentId = child['id'];
+      final DocumentSnapshot studentDoc = await FirebaseFirestore.instance
+          .collection('students')
+          .doc(studentId)
           .get();
 
-      // فلترة واحتساب النسب الحركية لكل مادة بشكل مستقل
-      final List<Map<String, dynamic>> updatedData = _subjectsTemplate.map((subject) {
+      List<dynamic> unlockedPackages = [];
+      String? studentGrade;
+      String? studentTerm;
+
+      if (studentDoc.exists && studentDoc.data() != null) {
+        final sData = studentDoc.data() as Map<String, dynamic>;
+        unlockedPackages = sData['unlockedPackages'] ?? [];
+        studentGrade = sData['stage'] as String?;
+        studentTerm = sData['term'] as String?;
+      }
+
+      final String stageCode = _stageCode(studentGrade);
+      final String termCode = _termCode(studentTerm);
+
+      // 2. فلترة المواد: نعرض فقط المادة اللي packageId بتاعها موجود في unlockedPackages
+      final List<Map<String, dynamic>> unlockedSubjects = _subjectsTemplate.where((subject) {
+        final String firestoreId = _firestoreSubjectId(subject['id'] as String);
+        final String packageId = '${firestoreId}_${stageCode}_${termCode}';
+        return unlockedPackages.contains(packageId);
+      }).toList();
+
+      // لو الطالب مش مشترك في أي مادة، منعرضش حاجة بدل ما نعرض كل المواد بصفر
+      if (unlockedSubjects.isEmpty) {
+        if (mounted) {
+          setState(() {
+            _subjectData = [];
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // 3. جلب سجلات تقدم الطالب بالكامل المربوطة بمعرفه
+      final QuerySnapshot progressSnap = await FirebaseFirestore.instance
+          .collection('student_progress')
+          .where('studentId', isEqualTo: studentId)
+          .get();
+
+      // 4. احتساب النسب الحركية فقط للمواد المشترك فيها فعلياً
+      final List<Map<String, dynamic>> updatedData = unlockedSubjects.map((subject) {
         final subjectDocs = progressSnap.docs.where((doc) {
           final pData = doc.data() as Map<String, dynamic>;
           return pData['subjectId'] == subject['id'];
@@ -155,44 +220,68 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
               // 💎 دمج مؤشر التحميل بسلاسة لضمان جودة الأداء البصري وثبات التصميم 💎
               child: _isLoading 
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFF005F61), strokeWidth: 4))
-                  : ListView.builder(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
-                      itemCount: _subjectData.length,
-                      itemBuilder: (context, index) {
-                        final data = _subjectData[index];
-                        final double finalSubjectScore = _calculateSubjectScore(data['watchProgress'], data['quizScore']);
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: data['color'], borderRadius: BorderRadius.circular(12)), child: Icon(data['icon'], color: const Color(0xFF005F61), size: 22)),
-                                  const SizedBox(width: 14),
-                                  Expanded(child: Text(data['subject'], style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)), maxLines: 1, overflow: TextOverflow.ellipsis)),
-                                  Text('${(finalSubjectScore * 100).toStringAsFixed(0)}%', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(value: finalSubjectScore, backgroundColor: const Color(0xFFF1F5F9), color: const Color(0xFF005F61), minHeight: 6)),
-                              const SizedBox(height: 16),
-                              Row(
-                                children: [
-                                  Expanded(child: _buildReportSubTile(label: 'مشاهدة (40%)', value: (data['watchProgress'] * 100).toStringAsFixed(0), icon: Icons.play_circle_outline_rounded)),
-                                  const SizedBox(width: 10),
-                                  Expanded(child: _buildReportSubTile(label: 'اختبار (60%)', value: (data['quizScore'] * 100).toStringAsFixed(0), icon: Icons.assignment_outlined, color: const Color(0xFFE6A100))),
-                                ],
-                              ),
-                            ],
+                  : _subjectData.isEmpty
+                      ? Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(24.0),
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.lock_outline_rounded, size: 64, color: Colors.grey[400]),
+                                const SizedBox(height: 16),
+                                const Text(
+                                  'لا توجد مواد مفعّلة لهذا الطالب حالياً',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'يرجى الاشتراك في إحدى المواد لمشاهدة تقرير الأداء.',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey[600]),
+                                ),
+                              ],
+                            ),
                           ),
-                        );
-                      },
-                    ),
+                        )
+                      : ListView.builder(
+                          physics: const BouncingScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(20, 20, 20, 40),
+                          itemCount: _subjectData.length,
+                          itemBuilder: (context, index) {
+                            final data = _subjectData[index];
+                            final double finalSubjectScore = _calculateSubjectScore(data['watchProgress'], data['quizScore']);
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(22), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.03 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: data['color'], borderRadius: BorderRadius.circular(12)), child: Icon(data['icon'], color: const Color(0xFF005F61), size: 22)),
+                                      const SizedBox(width: 14),
+                                      Expanded(child: Text(data['subject'], style: const TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)), maxLines: 1, overflow: TextOverflow.ellipsis)),
+                                      Text('${(finalSubjectScore * 100).toStringAsFixed(0)}%', style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF005F61))),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 14),
+                                  ClipRRect(borderRadius: BorderRadius.circular(10), child: LinearProgressIndicator(value: finalSubjectScore, backgroundColor: const Color(0xFFF1F5F9), color: const Color(0xFF005F61), minHeight: 6)),
+                                  const SizedBox(height: 16),
+                                  Row(
+                                    children: [
+                                      Expanded(child: _buildReportSubTile(label: 'مشاهدة (40%)', value: (data['watchProgress'] * 100).toStringAsFixed(0), icon: Icons.play_circle_outline_rounded)),
+                                      const SizedBox(width: 10),
+                                      Expanded(child: _buildReportSubTile(label: 'اختبار (60%)', value: (data['quizScore'] * 100).toStringAsFixed(0), icon: Icons.assignment_outlined, color: const Color(0xFFE6A100))),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
             ),
           ],
         ),

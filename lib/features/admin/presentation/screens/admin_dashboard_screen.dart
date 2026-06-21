@@ -1,10 +1,9 @@
 // lib/features/admin/presentation/screens/admin_dashboard_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
+import 'package:fahem/features/admin/presentation/screens/admin_profile_screen.dart'; // 👈 استيراد شاشة البروفايل الجديدة
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:fahem/core/routing/routes.dart';
 
 class AdminDashboardScreen extends StatelessWidget {
   const AdminDashboardScreen({super.key});
@@ -26,7 +25,7 @@ class AdminDashboardScreen extends StatelessWidget {
         if (state is AdminLoaded) {
           teachersCount = state.teachers.length;
           studentsCount = state.students.length;
-          parentsCount = state.parents.length; // تأكد من أن الـ Cubit يحتوي على أولياء الأمور
+          parentsCount = state.parents.length;
           platformEarnings = (state.financials['platformNetEarnings'] ?? 0.0).toDouble();
           teachersEarnings = (state.financials['totalTeachersHolding'] ?? 0.0).toDouble();
         }
@@ -85,46 +84,51 @@ class AdminDashboardScreen extends StatelessWidget {
                       borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30)),
                     ),
                     child: SafeArea(
-  child: Padding(
-    padding: const EdgeInsets.symmetric(horizontal: 16),
-    child: Row(
-      children: [
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          children: [
+                            // 👈 زر الدخول للملف الشخصي الجديد
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white.withAlpha(38),
+                                shape: BoxShape.circle,
+                              ),
+                              child: IconButton(
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const AdminProfileScreen()),
+                                  );
+                                },
+                                icon: const Icon(
+                                  Icons.manage_accounts_rounded,
+                                  color: Colors.white,
+                                  size: 24,
+                                ),
+                                tooltip: 'الحساب الشخصي',
+                              ),
+                            ),
 
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
-            shape: BoxShape.circle,
-          ),
-          child: IconButton(
-            onPressed: () => _logout(context),
-            icon: const Icon(
-              Icons.logout_rounded,
-              color: Colors.white,
-              size: 22,
-            ),
-            tooltip: 'تسجيل الخروج',
-          ),
-        ),
+                            const Spacer(),
 
-        const Spacer(),
+                            const Text(
+                              'لوحة تحكم الإدارة',
+                              style: TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
 
-        const Text(
-          'لوحة تحكم الإدارة',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
+                            const Spacer(),
 
-        const Spacer(),
-
-        const SizedBox(width: 48), // للمحافظة على التوسيط
-      ],
-    ),
-  ),
-),
+                            const SizedBox(width: 48), // للمحافظة على التوسيط البصري للعنوان
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -138,70 +142,6 @@ class AdminDashboardScreen extends StatelessWidget {
   // =========================================================
   // 🎨 تصميمات الكروت الجمالية
   // =========================================================
-
-
-
-
-void _logout(BuildContext context) {
-  showDialog(
-    context: context,
-    builder: (ctx) => Directionality(
-      textDirection: TextDirection.rtl,
-      child: AlertDialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(18),
-        ),
-        title: const Text(
-          'تسجيل الخروج',
-          style: TextStyle(
-            fontFamily: 'Cairo',
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        content: const Text(
-          'هل أنت متأكد أنك تريد تسجيل الخروج من حساب الإدارة؟',
-          style: TextStyle(fontFamily: 'Cairo'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text(
-              'إلغاء',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                color: Colors.grey,
-              ),
-            ),
-          ),
-
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(ctx);
-
-              await FirebaseAuth.instance.signOut();
-
-              Navigator.pushNamedAndRemoveUntil(
-                context,
-                Routes.loginScreen,
-                (route) => false,
-              );
-            },
-            child: const Text(
-              'خروج',
-              style: TextStyle(
-                fontFamily: 'Cairo',
-                color: Colors.redAccent,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-
 
   // 1. الكارت الرئيسي لأرباح المنصة (تصميم مميز)
   Widget _buildMainEarningsCard(double amount) {
@@ -226,7 +166,7 @@ void _logout(BuildContext context) {
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                decoration: BoxDecoration(color: Colors.white.withAlpha(51), borderRadius: BorderRadius.circular(12)),
                 child: const Icon(Icons.account_balance_rounded, color: Colors.white, size: 24),
               ),
               const SizedBox(width: 12),

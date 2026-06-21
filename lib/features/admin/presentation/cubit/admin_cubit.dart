@@ -240,6 +240,65 @@ Future<String?> updateTeacherData({
 }
 
 
+
+
+
+
+
+
+// داخل AdminCubit
+Future<void> deactivateStudentAndClearData({required String userId}) async {
+  try {
+    final WriteBatch batch = FirebaseFirestore.instance.batch();
+
+    // 1. تحديث بيانات الطالب (إيقاف الحساب + مسح الباقات)
+    batch.update(FirebaseFirestore.instance.collection('students').doc(userId), {
+      'isActive': false,
+      'unlockedPackages': [], 
+    });
+
+    // 2. حذف سجلات تقدم الطالب من كوليكشن student_progress
+    final progressQuery = await FirebaseFirestore.instance
+        .collection('student_progress')
+        .where('studentId', isEqualTo: userId)
+        .get();
+
+    for (var doc in progressQuery.docs) {
+      batch.delete(doc.reference);
+    }
+
+    await batch.commit();
+  } catch (e) {
+    debugPrint('Error deactivating student: $e');
+  }
+}
+Future<String?> deleteTeacher({required String teacherId}) async {
+  try {
+    await FirebaseFirestore.instance
+        .collection('teachers')
+        .doc(teacherId)
+        .delete();
+    return null;
+  } catch (e) {
+    return 'حدث خطأ أثناء الحذف: $e';
+  }
+}
+
+
+Future<void> withdrawEarnings(double amount) async {
+  try {
+    // نفترض أن بيانات المالية مخزنة في دوكيومنت باسم 'financials' داخل كوليكشن 'platform_data'
+    await FirebaseFirestore.instance
+        .collection('platform_data')
+        .doc('financials')
+        .update({
+      'platformNetEarnings': FieldValue.increment(-amount),
+    });
+  } catch (e) {
+    debugPrint('خطأ في عملية السحب: $e');
+  }
+}
+
 @override
   Future<void> close() {
     _teachersSub?.cancel();

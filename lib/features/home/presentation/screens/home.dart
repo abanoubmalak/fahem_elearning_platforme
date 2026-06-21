@@ -173,7 +173,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       child: Text(
 
                                         
-                                        'أنجزت ${progressPercent}% من منهج الأسبوع! استمر يا بطل.',
+                                        'أنجزت ${progressPercent}% ! استمر يا بطل.',
                                         style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey[700], fontWeight: FontWeight.w600),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,

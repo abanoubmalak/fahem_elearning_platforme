@@ -49,14 +49,45 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
 
   // ── دالة تغيير حالة الطالب ──
   // ── دالة تغيير حالة الطالب في Firestore ──
-  void _toggleStudentStatus(Map<String, dynamic> student) {
+ // استبدل دالة _toggleStudentStatus الحالية بهذه الدالة
+void _toggleStudentStatus(Map<String, dynamic> student) {
+  final bool currentStatus = student['isActive'] ?? true;
+
+  if (currentStatus) {
+    // الحالة الحالية "مفعل"، نريد إيقافه (مسح البيانات)
+    showDialog(
+      context: context,
+      builder: (ctx) => Directionality(
+        textDirection: TextDirection.rtl,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('إيقاف الطالب؟', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
+          content: const Text(
+            'عند إيقاف الطالب، سيتم حذف جميع الباقات (المواد) والتقدم الدراسي الخاص به نهائياً. هل أنت متأكد؟',
+            style: TextStyle(fontFamily: 'Cairo'),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء')),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.read<AdminCubit>().deactivateStudentAndClearData(userId: student['id']);
+              },
+              child: const Text('تأكيد وإيقاف', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  } else {
+    // الحالة الحالية "متوقف"، نريد تفعيله (ببساطة نغير الحالة)
     context.read<AdminCubit>().toggleUserStatus(
       collection: 'students',
       userId: student['id'],
-      currentStatus: student['isActive'] ?? true,
+      currentStatus: false,
     );
   }
-
+}
   @override
   Widget build(BuildContext context) {
     final double headerHeight = MediaQuery.of(context).size.height * 0.16;

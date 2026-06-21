@@ -2,8 +2,8 @@
 import 'dart:async';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 استيراد مصادقة فايربيز
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد قاعدة البيانات للفحص الذكي
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -23,59 +23,75 @@ class _SplashScreen extends State<SplashScreen>
   void initState() {
     super.initState();
 
-    // 1. Setup Status Bar (Make it transparent for full screen feel)
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
-        statusBarIconBrightness: Brightness.dark, // Dark icons for light background
+        statusBarIconBrightness: Brightness.dark,
       ),
     );
 
-    // 2. Setup Animations
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500), // Fade in duration
+      duration: const Duration(milliseconds: 1500),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeIn),
     );
 
-    // Start animation
     _animationController.forward();
 
-    // 3. نظام الفحص الذكي وحفظ الجلسة والتوجيه المعتمد على الأدوار 👈
     Timer(const Duration(seconds: 4), () async {
+      if (!mounted) return;
+
       final user = FirebaseAuth.instance.currentUser;
 
-      if (user != null) {
-        try {
-          // جلب مستند المستخدم لمعرفة الـ role الفعلي المخزن بالـ Firestore
-          final doc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-          
-          if (doc.exists && doc.data() != null) {
-            String role = doc.get('role') ?? 'student';
-            
-            // التوجيه الحركي الصارم حسب صلاحيات الحساب الموثق
-            if (role == 'admin') {
-              Navigator.pushReplacementNamed(context, Routes.AdminMainWrapper);
-            } else if (role == 'teacher') {///////////////teacher
-              Navigator.pushReplacementNamed(context, Routes.TeacherMainWrapper);
-            } else if (role == 'parent') {/////////parent
-              Navigator.pushReplacementNamed(context, Routes.ParentWrapper);
-            } else {
-              Navigator.pushReplacementNamed(context, Routes.MainWrapper); // الطالب الافتراضي
-            }
-          } else {
-            // إذا لم يوجد المستند يتم التصفير للشاشة الافتراضية للسلامة الأمنية
-            Navigator.pushReplacementNamed(context, Routes.loginScreen);
-          }
-        } catch (e) {
-          // في حال حدوث انقطاع بالشبكة يتم التوجيه لصفحة الدخول كحماية احتياطية
+      if (user == null) {
+        Navigator.pushReplacementNamed(context, Routes.loginScreen);
+        return;
+      }
+
+      try {
+        final doc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+
+        if (!doc.exists || doc.data() == null) {
+          // مستند غير موجود — يروح للوجين
           Navigator.pushReplacementNamed(context, Routes.loginScreen);
+          return;
         }
-      } else {
-        // إذا لم يسجل دخوله مسبقاً، يفتح شاشة الدخول المعتادة
+
+        final data = doc.data()!;
+        final bool isActive =
+            (data['is_active'] == true) || (data['isActive'] == true);
+
+        // ✅ إذا الحساب مش مفعّل — يرجع لشاشة OTP مش الرئيسية
+        if (!isActive) {
+          Navigator.pushReplacementNamed(
+            context,
+            Routes.OtpVerificationScreen,
+            arguments: {
+              'uid': user.uid,
+              'email': user.email ?? '',
+            },
+          );
+          return;
+        }
+
+        final String role = data['role'] ?? 'student';
+
+        if (role == 'admin') {
+          Navigator.pushReplacementNamed(context, Routes.AdminMainWrapper);
+        } else if (role == 'teacher') {
+          Navigator.pushReplacementNamed(context, Routes.TeacherMainWrapper);
+        } else if (role == 'parent') {
+          Navigator.pushReplacementNamed(context, Routes.ParentWrapper);
+        } else {
+          Navigator.pushReplacementNamed(context, Routes.MainWrapper);
+        }
+      } catch (e) {
         Navigator.pushReplacementNamed(context, Routes.loginScreen);
       }
     });
@@ -83,7 +99,7 @@ class _SplashScreen extends State<SplashScreen>
 
   @override
   void dispose() {
-    _animationController.dispose(); // Always dispose controllers
+    _animationController.dispose();
     super.dispose();
   }
 

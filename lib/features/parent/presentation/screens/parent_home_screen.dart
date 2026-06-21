@@ -70,12 +70,21 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                 child: const Text('تراجع', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontWeight: FontWeight.bold))
               ),
               ElevatedButton(
-                onPressed: () {
-                  parentCubit.removeChild(childId); // 👈 استخدام نسخة الـ Cubit المأمنة سحابياً بنجاح
-                  Navigator.pop(dialogContext);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('تم إلغاء ربط حساب $childName بنجاح', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent)
-                  );
+                onPressed: () async {
+                  Navigator.pop(dialogContext); // قفل نافذة التأكيد فورًا
+
+                  try {
+                    await parentCubit.removeChild(childId);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('تم إلغاء ربط حساب $childName بنجاح', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent)
+                    );
+                  } catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('فشل إلغاء الربط: $e', style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                    );
+                  }
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                 child: const Text('تأكيد الحذف', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),

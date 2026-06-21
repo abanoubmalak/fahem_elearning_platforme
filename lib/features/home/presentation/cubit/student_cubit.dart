@@ -59,6 +59,19 @@ class StudentCubit extends Cubit<StudentState> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // 💎 خريطة تحويل: الـ id الداخلي في SubjectProvider قد يختلف عن
+  // الـ prefix المستخدم فعلياً في فايربيز (unlockedPackages / subjects_content).
+  // مثال: مادة اللغة العربية id داخلي = 'ar' لكن المخزن في فايربيز 'arabic'.
+  // أي مادة مش موجودة هنا، هيتم استخدام sub.id كما هو بدون تغيير.
+  static const Map<String, String> _firestoreSubjectIdMap = {
+    'ar': 'arabic',
+  };
+
+  // 👈 دالة موحّدة لحساب الـ id المستخدم فعلياً في فايربيز لأي مادة
+  String _firestoreSubjectId(String localId) {
+    return _firestoreSubjectIdMap[localId] ?? localId;
+  }
+
   void safeEmit(StudentState state) {
     if (!isClosed) {
       emit(state);
@@ -140,9 +153,13 @@ class StudentCubit extends Cubit<StudentState> {
         if (liveGrade == 'الصف الثاني الإعدادي') stageCode = 'g2';
         if (liveGrade == 'الصف الثالث الإعدادي') stageCode = 'g3';
         String termCode = liveTerm == 'الترم الأول' ? 't1' : 't2';
-        String packageId = '${sub.id}_${stageCode}_${termCode}';
+
+        // 💎 استخدام الـ id المطابق لما هو مخزّن فعلياً في فايربيز
+        String firestoreId = _firestoreSubjectId(sub.id);
+        String packageId = '${firestoreId}_${stageCode}_${termCode}';
 
         // حساب التقدم الفردي للمادة الحالية بناءً على الداتابيز
+        // (الجلب من student_progress يتم بالـ id المحلي كما هو محفوظ من شاشات الدرس/الاختبار)
         double calculatedSubjectProgress = 0.0;
         if (subjectCountMap.containsKey(sub.id) && subjectCountMap[sub.id]! > 0) {
           calculatedSubjectProgress = subjectProgressMap[sub.id]! / subjectCountMap[sub.id]!;
@@ -215,7 +232,10 @@ class StudentCubit extends Cubit<StudentState> {
         if (newGrade == 'الصف الثاني الإعدادي') stageCode = 'g2';
         if (newGrade == 'الصف الثالث الإعدادي') stageCode = 'g3';
         String termCode = newTerm == 'الترم الأول' ? 't1' : 't2';
-        String packageId = '${sub.id}_${stageCode}_${termCode}';
+
+        // 💎 نفس خريطة التحويل هنا أيضاً لضمان التطابق بعد تعديل بيانات الطالب
+        String firestoreId = _firestoreSubjectId(sub.id);
+        String packageId = '${firestoreId}_${stageCode}_${termCode}';
 
         return sub.copyWith(
           isUnlocked: currentState.unlockedPackages.contains(packageId),

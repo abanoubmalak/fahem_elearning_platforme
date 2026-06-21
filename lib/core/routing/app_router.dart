@@ -12,15 +12,16 @@ import 'package:fahem/features/admin/presentation/screens/edit_teacher_screen.da
 import 'package:fahem/features/admin/presentation/screens/parent_details_screen.dart';
 import 'package:fahem/features/admin/presentation/screens/student_details_screen.dart';
 import 'package:fahem/features/admin/presentation/screens/teacher_details_screen.dart';
-
-import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart'; 
+import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 import 'package:fahem/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:fahem/features/auth/presentation/screens/otp_verification_screen.dart';
+
+// ✅ import الـ OTP بتاع Auth فقط واخفاء اللي في forgot_password
+
 import 'package:fahem/features/auth/presentation/screens/role_selection_screen.dart';
 import 'package:fahem/features/courses/presentation/screens/courses.dart';
 import 'package:fahem/features/forgot_password/presentation/screens/forgot_password_screen.dart';
 import 'package:fahem/features/forgot_password/presentation/screens/reset_password_screen.dart';
-import 'package:fahem/features/forgot_password/presentation/screens/verification_screen.dart';
 import 'package:fahem/features/home/presentation/cubit/student_cubit.dart';
 import 'package:fahem/features/home/presentation/screens/home.dart';
 import 'package:fahem/features/home/presentation/screens/main_wrapper.dart';
@@ -38,7 +39,7 @@ import 'package:fahem/features/parent/presentation/screens/payment_checkout_scre
 import 'package:fahem/features/performance/presentation/screens/performance_screen.dart';
 import 'package:fahem/features/profile/presentation/screens/profile_screen.dart';
 import 'package:fahem/features/auth/presentation/screens/sign_up.dart';
-import 'package:fahem/features/splash/presentation/screens/splash_screen.dart'; 
+import 'package:fahem/features/splash/presentation/screens/splash_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/manage_sections/add_lesson_content_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/manage_sections/lesson_content_hub_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/manage_sections/manage_media_content_screen.dart';
@@ -59,16 +60,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'routes.dart';
 
+
 class AppRouter {
   final AuthCubit _authCubit = AuthCubit();
   final AdminCubit _adminCubit = AdminCubit()..listenToPlatformLive();
 
   Map<String, dynamic> sampleTeacherData = {
-    'id': '101', 'name': 'المهندس أبانوب', 'email': 'abanoub@fahem.com', 'phone': '0123456789', 'isActive': true, 'main_subject': 'برمجة', 'subjects': []
+    'id': '101', 'name': 'المهندس أبانوب', 'email': 'abanoub@fahem.com',
+    'phone': '0123456789', 'isActive': true, 'main_subject': 'برمجة', 'subjects': []
   };
 
   Map<String, dynamic> sampleStudentData = {
-    'id': '101', 'name': 'يوسف أحمد', 'stage': 'الصف الثاني الابتدائي', 'phone': '01098765432', 'email': 'youssef@example.com', 'isActive': true, 'term': 'الترم الأول'
+    'id': '101', 'name': 'يوسف أحمد', 'stage': 'الصف الثاني الابتدائي',
+    'phone': '01098765432', 'email': 'youssef@example.com', 'isActive': true, 'term': 'الترم الأول'
   };
 
   Route? generateRoute(RouteSettings settings) {
@@ -85,25 +89,26 @@ class AppRouter {
           pageBuilder: (context, animation, secondaryAnimation) =>
               BlocProvider.value(value: _authCubit, child: const LoginScreen()),
           transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            const begin = Offset(1.0, 0.0); 
+            const begin = Offset(1.0, 0.0);
             const end = Offset.zero;
             final tween = Tween(begin: begin, end: end);
-            final offsetAnimation = animation.drive(tween);
-            return SlideTransition(position: offsetAnimation, child: child);
+            return SlideTransition(position: animation.drive(tween), child: child);
           },
         );
 
       case Routes.signUpScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _authCubit, child: const SignUpScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _authCubit, child: const SignUpScreen()));
 
       case Routes.forgotPasswordScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _authCubit, child: const ForgotPasswordScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _authCubit, child: const ForgotPasswordScreen()));
 
       case Routes.HomeScreen:
-        return MaterialPageRoute(builder: (_)=> const HomeScreen());
+        return MaterialPageRoute(builder: (_) => const HomeScreen());
 
       case Routes.Courses:
-        return MaterialPageRoute(builder: (_)=> const Courses());
+        return MaterialPageRoute(builder: (_) => const Courses());
 
       case Routes.SubjectDetailsScreen:
         return MaterialPageRoute(
@@ -121,7 +126,7 @@ class AppRouter {
             child: const MainWrapper(),
           ),
         );
-        
+
       case Routes.VideoPlayerScreen:
         return MaterialPageRoute(
           builder: (_) => VideoPlayerScreen(
@@ -151,124 +156,138 @@ class AppRouter {
           ),
         );
 
-      case Routes.ProfileScreen: 
+      case Routes.ProfileScreen:
         final studentCubit = settings.arguments is StudentCubit
             ? settings.arguments as StudentCubit
             : (StudentCubit()..loadStudentDashboard());
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: studentCubit, child: const ProfileScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: studentCubit, child: const ProfileScreen()));
 
       case Routes.ContactTeachersScreen:
-        return MaterialPageRoute(builder: (_)=> const ContactTeachersScreen());
+        return MaterialPageRoute(builder: (_) => const ContactTeachersScreen());
 
-     case Routes.ChatScreen:
-  // استخراج البيانات مباشرة من إعدادات المسار لتجنب خطأ التعريف
-  final args = settings.arguments as Map<String, dynamic>;
-  
-  return MaterialPageRoute(
-    builder: (_) => ChatScreen(
-      teacherId: args['teacherId'],     
-      teacherName: args['teacherName'], 
-      subject: args['subject'],         
-      studentName: args['studentName'], 
-    ),
-  );
+      case Routes.ChatScreen:
+        final chatArgs = settings.arguments as Map<String, dynamic>;
+        return MaterialPageRoute(
+          builder: (_) => ChatScreen(
+            teacherId: chatArgs['teacherId'],
+            teacherName: chatArgs['teacherName'],
+            subject: chatArgs['subject'],
+            studentName: chatArgs['studentName'],
+          ),
+        );
 
       case Routes.PerformanceScreen:
-        return MaterialPageRoute(builder: (_)=> const PerformanceScreen());
+        return MaterialPageRoute(builder: (_) => const PerformanceScreen());
 
+      // ✅ OtpVerificationScreen بتاع التسجيل
       case Routes.OtpVerificationScreen:
         return MaterialPageRoute(
           builder: (_) => BlocProvider.value(
             value: _authCubit,
-            child: OtpVerificationScreen(email: args?['email'] ?? 'تحت المعالجة', uid: args?['uid'] ?? ''),
+            child: OtpVerificationScreen(
+              email: args?['email'] ?? '',
+              uid: args?['uid'] ?? '',
+            ),
           ),
         );
 
       case Routes.RoleSelectionScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _authCubit, child: const RoleSelectionScreen()));
-      
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _authCubit, child: const RoleSelectionScreen()));
+
       case Routes.ParentWrapper:
-        return MaterialPageRoute(builder: (_)=> const ParentWrapper());
+        return MaterialPageRoute(builder: (_) => const ParentWrapper());
 
       case Routes.ParentHomeScreen:
-        return MaterialPageRoute(builder: (_)=> const ParentHomeScreen());
+        return MaterialPageRoute(builder: (_) => const ParentHomeScreen());
 
       case Routes.LinkChildScreen:
-        return MaterialPageRoute(builder: (_)=> LinkChildScreen(onTabSwitch: args?['onTabSwitch'] ?? (int i){} ));
+        return MaterialPageRoute(
+          builder: (_) => LinkChildScreen(onTabSwitch: args?['onTabSwitch'] ?? (int i) {}));
 
       case Routes.ChildReportScreen:
         return MaterialPageRoute(
-          builder: (_)=> ChildReportScreen(
+          builder: (_) => ChildReportScreen(
             childrenData: args?['childrenData'] as List<Map<String, dynamic>>? ?? [],
             initialChild: args?['initialChild'] as Map<String, dynamic>?,
-          )
+          ),
         );
 
       case Routes.PaymentCheckoutScreen:
         return MaterialPageRoute(
-          builder: (_)=> PaymentCheckoutScreen(
+          builder: (_) => PaymentCheckoutScreen(
             packageAmount: args?['packageAmount'] as double? ?? 100.0,
-            onTabSwitch: args?['onTabSwitch'] ?? (int i){},
-          )
+            onTabSwitch: args?['onTabSwitch'] ?? (int i) {},
+          ),
         );
 
       case Routes.ParentProfileScreen:
-        return MaterialPageRoute(builder: (_)=> const ParentProfileScreen());
+        return MaterialPageRoute(builder: (_) => const ParentProfileScreen());
 
       case Routes.TeacherSubjectsTab:
-        return MaterialPageRoute(builder: (_)=> const TeacherSubjectsTab());
+        return MaterialPageRoute(builder: (_) => const TeacherSubjectsTab());
 
       case Routes.TeacherMainWrapper:
-        return MaterialPageRoute(builder: (_)=> const TeacherMainWrapper());
+        return MaterialPageRoute(builder: (_) => const TeacherMainWrapper());
 
       case Routes.AddLessonContentScreen:
-        return MaterialPageRoute(builder: (_)=> const AddLessonContentScreen(lessonName: "Lesson 1", contentType: "video"));
+        return MaterialPageRoute(
+          builder: (_) => const AddLessonContentScreen(lessonName: "Lesson 1", contentType: "video"));
 
       case Routes.LessonContentViewScreen:
-        return MaterialPageRoute(builder: (_)=> const AddLessonContentScreen(lessonName: "Lesson 1", contentType: "video"));
+        return MaterialPageRoute(
+          builder: (_) => const AddLessonContentScreen(lessonName: "Lesson 1", contentType: "video"));
 
       case Routes.ManageMediaContentScreen:
-        return MaterialPageRoute(builder: (_)=> ManageMediaContentScreen(
-          lessonName: args?['lessonName'] as String? ?? '',
-          initialContent: args?['initialContent'] as String?,
-        ));
+        return MaterialPageRoute(
+          builder: (_) => ManageMediaContentScreen(
+            lessonName: args?['lessonName'] as String? ?? '',
+            initialContent: args?['initialContent'] as String?,
+          ),
+        );
 
       case Routes.ManageTextSummaryScreen:
         final localArgs = settings.arguments as Map<String, dynamic>;
         return MaterialPageRoute(
           builder: (_) => ManageTextSummaryScreen(
             lessonName: localArgs['lessonName'],
-            initialSummaries: localArgs['initialSummaries'], 
+            initialSummaries: localArgs['initialSummaries'],
           ),
         );
 
       case Routes.ManageQuizContentScreen:
-        return MaterialPageRoute(builder: (_)=> ManageQuizContentScreen(
-          lessonName: args?['lessonName'] as String? ?? '',
-          unitName: args?['unitName'] as String? ?? 'الوحدة الأولى',
-          subjectId: args?['subjectId'] as String? ?? 'sci',
-          term: args?['term'] as String? ?? 'الترم الثاني',
-          initialQuestions: args?['initialQuestions'] as List<dynamic>?,
-        ));
+        return MaterialPageRoute(
+          builder: (_) => ManageQuizContentScreen(
+            lessonName: args?['lessonName'] as String? ?? '',
+            unitName: args?['unitName'] as String? ?? 'الوحدة الأولى',
+            subjectId: args?['subjectId'] as String? ?? 'sci',
+            term: args?['term'] as String? ?? 'الترم الثاني',
+            initialQuestions: args?['initialQuestions'] as List<dynamic>?,
+          ),
+        );
 
-      // 💎 تم تعديل هذا الجزء لحل مشكلة الـ undefined_named_parameter 💎
       case Routes.TeacherQuizEditorScreen:
-        return MaterialPageRoute(builder: (_)=> TeacherQuizEditorScreen(
-          lessonName: args?['lessonName'] as String? ?? '',
-          initialQuiz: args?['initialQuestions'] as List<dynamic>?, // استخدام initialQuiz هنا
-        ));
+        return MaterialPageRoute(
+          builder: (_) => TeacherQuizEditorScreen(
+            lessonName: args?['lessonName'] as String? ?? '',
+            initialQuiz: args?['initialQuestions'] as List<dynamic>?,
+          ),
+        );
 
       case Routes.LessonContentHubScreen:
-        return MaterialPageRoute(builder: (_)=> LessonContentHubScreen(
-          lessonName: args?['lessonName'] as String? ?? '',
-          unitName: args?['unitName'] as String? ?? 'الوحدة الأولى',
-          stageName: args?['stageName'] as String? ?? 'المرحلة الدراسية',
-          subjectId: args?['subjectId'] as String? ?? 'sci',
-          term: args?['term'] as String? ?? 'الترم الثاني',
-        ));
+        return MaterialPageRoute(
+          builder: (_) => LessonContentHubScreen(
+            lessonName: args?['lessonName'] as String? ?? '',
+            unitName: args?['unitName'] as String? ?? 'الوحدة الأولى',
+            stageName: args?['stageName'] as String? ?? 'المرحلة الدراسية',
+            subjectId: args?['subjectId'] as String? ?? 'sci',
+            term: args?['term'] as String? ?? 'الترم الثاني',
+          ),
+        );
 
       case Routes.TeacherProfileScreen:
-        return MaterialPageRoute(builder: (_)=> const TeacherProfileScreen());
+        return MaterialPageRoute(builder: (_) => const TeacherProfileScreen());
 
       case Routes.TeacherUnitsScreen:
         return MaterialPageRoute(
@@ -281,70 +300,96 @@ class AppRouter {
 
       case Routes.TeacherLessonsScreen:
         return MaterialPageRoute(
-          builder: (_)=> TeacherLessonsScreen(
-            unitName: args?['unitName'] as String? ?? 'الوحدة الأولى', 
+          builder: (_) => TeacherLessonsScreen(
+            unitName: args?['unitName'] as String? ?? 'الوحدة الأولى',
             stageName: args?['stageName'] as String? ?? 'المرحلة الدراسية',
             subjectId: args?['subjectId'] as String? ?? 'sci',
             term: args?['term'] as String? ?? 'الترم الثاني',
-          )
+          ),
         );
 
       case Routes.TeacherStatisticsScreen:
-        return MaterialPageRoute(builder: (_)=> const TeacherStatisticsScreen());
+        return MaterialPageRoute(builder: (_) => const TeacherStatisticsScreen());
 
       case Routes.ResetPasswordScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _authCubit, child: const ResetPasswordScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _authCubit, child: const ResetPasswordScreen()));
 
       case Routes.TeacherQuestionsScreen:
-        return MaterialPageRoute(builder: (_)=> const TeacherQuestionsScreen());
+        return MaterialPageRoute(builder: (_) => const TeacherQuestionsScreen());
 
+      // ✅ VerificationScreen بتاع نسيت كلمة المرور
       case Routes.VerificationScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _authCubit, child: const VerificationScreen()));
-
+  return MaterialPageRoute(
+    builder: (_) => BlocProvider.value(
+      value: _authCubit,
+      child: OtpVerificationScreen(
+        email: args?['email'] ?? '',
+        uid: args?['uid'] ?? '',
+      ),
+    ),
+  );
       case Routes.TeacherFinancialScreen:
-        return MaterialPageRoute(builder: (_)=> const TeacherFinancialScreen());
+        return MaterialPageRoute(builder: (_) => const TeacherFinancialScreen());
 
       case Routes.AdminMainWrapper:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminMainWrapper()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminMainWrapper()));
 
       case Routes.AdminDashboardScreen:
-        return MaterialPageRoute(builder: (_)=> BlocProvider.value(value: _adminCubit, child: const AdminDashboardScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminDashboardScreen()));
 
       case Routes.AdminTeachersManagementScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTeachersManagementScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTeachersManagementScreen()));
 
       case Routes.AddTeacherScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AddTeacherScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AddTeacherScreen()));
 
       case Routes.EditTeacherScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: EditTeacherScreen(teacherData: args ?? sampleTeacherData)));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _adminCubit, child: EditTeacherScreen(teacherData: args ?? sampleTeacherData)));
 
       case Routes.TeacherDetailsScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: TeacherDetailsScreen(teacherData: args ?? sampleTeacherData)));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _adminCubit, child: TeacherDetailsScreen(teacherData: args ?? sampleTeacherData)));
 
       case Routes.AdminStudentsManagementScreen:
-        return MaterialPageRoute(builder: (_)=> BlocProvider.value(value: _adminCubit, child: const AdminStudentsManagementScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminStudentsManagementScreen()));
 
       case Routes.EditStudentScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: EditStudentScreen(studentData: args ?? sampleStudentData)));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _adminCubit, child: EditStudentScreen(studentData: args ?? sampleStudentData)));
 
       case Routes.StudentDetailsScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: StudentDetailsScreen(studentData: args ?? sampleStudentData)));
-case Routes.AdminTreasuryScreen:
-  return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _adminCubit, child: StudentDetailsScreen(studentData: args ?? sampleStudentData)));
+
+      // ✅ AdminTreasuryScreen مرة واحدة بس
+      case Routes.AdminTreasuryScreen:
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
+
       case Routes.AdminParentsManagementScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminParentsManagementScreen()));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminParentsManagementScreen()));
 
       case Routes.ParentDetailsScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: ParentDetailsScreen(parentData: args ?? {})));
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _adminCubit, child: ParentDetailsScreen(parentData: args ?? {})));
 
       case Routes.EditParentScreen:
-        return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: EditParentScreen(parentData: args ?? {})));
-
-      case Routes.AdminTreasuryScreen:
-  return MaterialPageRoute(builder: (_) => BlocProvider.value(value: _adminCubit, child: const AdminTreasuryScreen()));
-
-
+        return MaterialPageRoute(
+          builder: (_) => BlocProvider.value(
+            value: _adminCubit, child: EditParentScreen(parentData: args ?? {})));
 
       default:
         return MaterialPageRoute(

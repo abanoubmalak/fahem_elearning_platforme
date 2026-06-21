@@ -1,184 +1,300 @@
-// lib/features/forgot_password/presentation/screens/verification_screen.dart
+// lib/features/auth/presentation/screens/otp_verification_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/auth/presentation/cubit/auth_cubit.dart';
 import 'package:fahem/features/auth/presentation/cubit/auth_state.dart';
-import 'dart:async'; // 👈 مطلوب لتشغيل الـ Timer
+import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class VerificationScreen extends StatefulWidget {
-  const VerificationScreen({super.key});
+class OtpVerificationScreen extends StatefulWidget {
+  final String email;
+  final String uid;
+
+  const OtpVerificationScreen({super.key, required this.email, required this.uid});
 
   @override
-  State<VerificationScreen> createState() => _VerificationScreenState();
+  State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
 }
 
-class _VerificationScreenState extends State<VerificationScreen> {
-  // 👈 متغيرات العداد التنازلي لإعادة الإرسال
-  late Timer _timer;
+class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
+  Timer? _timer;
   int _secondsRemaining = 59;
   bool _canResend = false;
 
-  // تقليص المصفوفات هندسياً لـ 4 أرقام فقط 
   final List<TextEditingController> _controllers = List.generate(4, (_) => TextEditingController());
   final List<FocusNode> _focusNodes = List.generate(4, (_) => FocusNode());
 
   @override
   void initState() {
     super.initState();
-    _startTimer(); // بدء العداد التنازلي فور فتح الشاشة
+    _startTimer();
   }
 
-  // دالة تشغيل وإعادة تهيئة العداد التنازلي
   void _startTimer() {
-    setState(() { _secondsRemaining = 59; _canResend = false; });
+    setState(() {
+      _secondsRemaining = 59;
+      _canResend = false;
+    });
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      if (_secondsRemaining > 0) { 
-        setState(() { _secondsRemaining--; }); 
-      } else { 
-        setState(() { _canResend = true; _timer.cancel(); }); 
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_secondsRemaining > 0) {
+        setState(() => _secondsRemaining--);
+      } else {
+        setState(() => _canResend = true);
+        timer.cancel();
       }
     });
   }
 
+  // ✅ إلغاء العملية والرجوع لشاشة الدخول
+  void _cancelAndGoToLogin() {
+    _timer?.cancel();
+    FirebaseAuth.instance.signOut().catchError((_) {});
+    Navigator.pushNamedAndRemoveUntil(
+      context,
+      Routes.loginScreen,
+      (route) => false,
+    );
+  }
+
   @override
   void dispose() {
-    _timer.cancel(); // إلغاء التايمر من الذاكرة لمنع الـ Memory Leak
-    for (var c in _controllers) { c.dispose(); }
-    for (var f in _focusNodes) { f.dispose(); }
+    _timer?.cancel();
+    for (var controller in _controllers) controller.dispose();
+    for (var node in _focusNodes) node.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final double headerHeight = MediaQuery.of(context).size.height * 0.24;
     final cubit = BlocProvider.of<AuthCubit>(context);
 
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: BlocConsumer<AuthCubit, AuthState>(
-        listener: (context, state) {
-          if (state is AuthForgotOTPVerified) {
-            Navigator.pushNamed(context, Routes.ResetPasswordScreen);
-          } else if (state is AuthFailure) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
-          }
-        },
-        builder: (context, state) {
-          bool isLoading = state is AuthLoading;
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (!didPop) _cancelAndGoToLogin();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.scaffoldBackground,
+        resizeToAvoidBottomInset: true,
+        body: Directionality(
+          textDirection: TextDirection.rtl,
+          child: BlocConsumer<AuthCubit, AuthState>(
+            listener: (context, state) {
+              if (state is AuthSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('تم تفعيل الحساب بنجاح! 🎉', style: TextStyle(fontFamily: 'Cairo')),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+                if (state.role == 'admin') {
+                  Navigator.pushNamedAndRemoveUntil(context, Routes.AdminMainWrapper, (route) => false);
+                } else if (state.role == 'teacher') {
+                  Navigator.pushNamedAndRemoveUntil(context, Routes.TeacherMainWrapper, (route) => false);
+                } else if (state.role == 'parent') {
+                  Navigator.pushNamedAndRemoveUntil(context, Routes.ParentWrapper, (route) => false);
+                } else {
+                  Navigator.pushNamedAndRemoveUntil(context, Routes.MainWrapper, (route) => false);
+                }
+              } else if (state is AuthFailure) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(state.error, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                );
+              }
+            },
+            builder: (context, state) {
+              bool isLoading = state is AuthLoading;
 
-          return Center(
-            child: SafeArea(
-              child: SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 25.0, vertical: 20.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(height: 30.0),
-                      const Icon(Icons.mark_email_read_outlined, size: 150, color: Color(0xFF269A9E)),
-                      const SizedBox(height: 30),
-                      const Text("تحقق من بريدك الإلكتروني", style: TextStyle(fontFamily: "Cairo", fontSize: 20, fontWeight: FontWeight.w900, color: AppColors.darkGreyColor)),
-                      const SizedBox(height: 10),
-                      // تحديث النص ليعكس الـ 4 أرقام الجديدة 👈
-                      const Text("أدخل رمز التحقق المكون من 4 أرقام المرسل إلى بريدك", textAlign: TextAlign.center, style: TextStyle(color: AppColors.darkGreyColor, fontWeight: FontWeight.bold, fontFamily: "Cairo", fontSize: 14)),
-                      const SizedBox(height: 30),
-                      
-                      // توزيع الـ 4 صناديق بـأبعاد متناسقة من اليسار لليمين (LTR)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 30.0),
-                        child: Directionality(
-                          textDirection: TextDirection.ltr,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: List.generate(4, (index) => _buildSingleOtpBox(index)),
+              return Stack(
+                children: [
+                  Positioned(
+                    top: 0, left: 0, right: 0, height: headerHeight,
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topRight,
+                          end: Alignment.bottomLeft,
+                          colors: [Color(0xFF005F61), Color(0xFF003D3F)],
+                        ),
+                        borderRadius: BorderRadius.only(
+                          bottomLeft: Radius.circular(35),
+                          bottomRight: Radius.circular(35),
+                        ),
+                      ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 5),
+                          child: Stack(
+                            alignment: Alignment.topCenter,
+                            children: [
+                              // ✅ زر الرجوع يستدعي _cancelAndGoToLogin
+                              Align(
+                                alignment: Alignment.topRight,
+                                child: IconButton(
+                                  icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                                  onPressed: _cancelAndGoToLogin,
+                                ),
+                              ),
+                              const Padding(
+                                padding: EdgeInsets.only(top: 10),
+                                child: Text(
+                                  'تأكيد الحساب الرقمي',
+                                  style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      
-                      const SizedBox(height: 40),
-                      ElevatedButton(
-                        onPressed: isLoading ? null : () {
-                          String fullCode = _controllers.map((c) => c.text).join();
-                          if (fullCode.length < 4) {
-                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('من فضلك أدخل كود التحقق كاملاً', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
-                            return;
-                          }
-                          cubit.verifyForgotPasswordOtp(fullCode); 
-                        },
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryTeal, minimumSize: const Size(double.infinity, 65), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)), elevation: 0),
-                        child: isLoading
-                            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3))
-                            : const Text("متابعة", style: TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                      ),
-                      const SizedBox(height: 30),
-                      
-                      // الـ Row المطور ديناميكياً ليدعم العداد التنازلي لإعادة الإرسال 👈
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                    ),
+                  ),
+                  Positioned.fill(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
                         children: [
-                          _canResend
-                              ? TextButton(
-                                  onPressed: () {
-                                    _startTimer(); // إعادة تشغيل التايمر
-                                    cubit.sendForgotPasswordOtp(cubit.tempForgotEmail ?? ""); // طلب كود جديد حياً
-                                  }, 
-                                  child: const Text(
-                                    "إعادة الإرسال", 
-                                    style: TextStyle(color: Color(0xFF269A9E), fontFamily: "Cairo", fontWeight: FontWeight.bold, fontSize: 18)
-                                  )
-                                )
-                              : Text(
-                                  '00:${_secondsRemaining.toString().padLeft(2, '0')}', 
-                                  style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFFE6A100))
-                                ),
-                          const SizedBox(width: 8),
-                          Text(
-                            _canResend ? "لم يصلك الرمز؟" : "يمكنك إعادة طلب الرمز خلال",
-                            style: const TextStyle(fontFamily: "Cairo", fontWeight: FontWeight.bold, fontSize: 15, color: AppColors.darkGreyColor),
+                          SizedBox(height: headerHeight + 30),
+                          const CircleAvatar(
+                            radius: 42,
+                            backgroundColor: Colors.white,
+                            child: Icon(Icons.mark_email_read_outlined, size: 45, color: Color(0xFF005F61)),
                           ),
+                          const SizedBox(height: 25),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 30.0),
+                            child: Column(
+                              children: [
+                                const Text('أدخل رمز التحقق', style: TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textMain)),
+                                const SizedBox(height: 10),
+                                Text(
+                                  'قمنا بإرسال كود التحقق المكون من 4 أرقام إلى بريدك الإلكتروني المستقر بالأسفل:',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(fontFamily: 'Cairo', fontSize: 12, color: Colors.grey[600], height: 1.5),
+                                ),
+                                const SizedBox(height: 6),
+                                Text(widget.email, style: const TextStyle(fontFamily: 'Montserrat', fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 35),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                            child: Directionality(
+                              textDirection: TextDirection.ltr,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: List.generate(4, (index) => _buildOtpBox(index)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                _canResend ? 'لم يصلك الكود؟ ' : 'يمكنك إعادة طلب الكود خلال ',
+                                style: const TextStyle(fontFamily: 'Cairo', fontSize: 12, color: AppColors.textGrey),
+                              ),
+                              _canResend
+                                  ? TextButton(
+                                      onPressed: () {
+                                        cubit.resendOTP(widget.uid, widget.email); // ✅ إعادة إرسال حقيقية
+                                        _startTimer();
+                                      },
+                                      child: const Text(
+                                        'إعادة إرسال الرمز',
+                                        style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFFE6A100)),
+                                      ),
+                                    )
+                                  : Text(
+                                      '00:${_secondsRemaining.toString().padLeft(2, '0')}',
+                                      style: const TextStyle(fontFamily: 'Montserrat', fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFFE6A100)),
+                                    ),
+                            ],
+                          ),
+                          const SizedBox(height: 40),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: SizedBox(
+                              width: double.infinity,
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: isLoading
+                                    ? null
+                                    : () {
+                                        String otpCode = _controllers.map((c) => c.text).join();
+                                        if (otpCode.length < 4) {
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            const SnackBar(
+                                              content: Text('من فضلك أدخل كود التحقق كاملاً', style: TextStyle(fontFamily: 'Cairo')),
+                                              backgroundColor: Colors.redAccent,
+                                            ),
+                                          );
+                                          return;
+                                        }
+                                        cubit.verifyOTP(widget.uid, otpCode);
+                                      },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF005F61),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+                                  elevation: 0,
+                                ),
+                                child: isLoading
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                    : const Text('تأكيد الحساب وتفعيل', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 40),
                         ],
                       ),
-                      const SizedBox(height: 50,)
-                    ],
+                    ),
                   ),
-                ),
-              ),
-            ),
-          );
-        }
+                ],
+              );
+            },
+          ),
+        ),
       ),
     );
   }
 
-  // باني الصناديق الرباعية مع الفوكس الذكي المحدث
-  Widget _buildSingleOtpBox(int index) {
+  Widget _buildOtpBox(int index) {
     return SizedBox(
-      width: 56, // زيادة العرض قليلاً ليناسب المساحة الأفقية بعد حذف خانتين
+      width: 56,
       height: 58,
       child: TextField(
-        controller: _controllers[index], focusNode: _focusNodes[index],
-        textAlign: TextAlign.center, keyboardType: TextInputType.number, maxLength: 1,
+        controller: _controllers[index],
+        focusNode: _focusNodes[index],
+        keyboardType: TextInputType.number,
+        textAlign: TextAlign.center,
+        maxLength: 1,
         style: const TextStyle(fontFamily: 'Montserrat', fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textMain),
         inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         decoration: InputDecoration(
-          counterText: "", filled: true, fillColor: Colors.white,
+          counterText: '',
+          filled: true,
+          fillColor: Colors.white,
           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: Colors.grey[200]!)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primaryTeal, width: 2.5))
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: const BorderSide(color: AppColors.primary, width: 2)),
         ),
         onChanged: (value) {
           if (value.length == 1) {
-            if (index < 3) { // 👈 التعديل لـ 4 خانات (الحد الأقصى index 3)
-              FocusScope.of(context).requestFocus(_focusNodes[index + 1]); 
-            } else { 
-              _focusNodes[index].unfocus(); 
+            if (index < 3) {
+              FocusScope.of(context).requestFocus(_focusNodes[index + 1]);
+            } else {
+              _focusNodes[index].unfocus();
             }
           } else if (value.isEmpty) {
-            if (index > 0) { 
-              FocusScope.of(context).requestFocus(_focusNodes[index - 1]); 
-            }
+            if (index > 0) FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
           }
         },
       ),
