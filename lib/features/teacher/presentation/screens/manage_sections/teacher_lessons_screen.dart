@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/screens/manage_sections/teacher_lessons_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/teacher/presentation/cubit/teacher_academic_cubit.dart';
@@ -26,9 +25,7 @@ class TeacherLessonsScreen extends StatefulWidget {
 
 class _TeacherLessonsScreenState extends State<TeacherLessonsScreen> {
 
-  // عدّل الدالة لتصبح هكذا (بدون تمرير currentUnits):
-// عدّل الدالة لتصبح هكذا (بدون تمرير currentUnits):
-void _openAddLessonBottomSheet() { // حذفنا المعامل هنا
+void _openAddLessonBottomSheet() { 
   final TextEditingController lessonController = TextEditingController();
 
   showModalBottomSheet(
@@ -54,7 +51,6 @@ void _openAddLessonBottomSheet() { // حذفنا المعامل هنا
               child: ElevatedButton(
                 onPressed: () {
                   if (lessonController.text.trim().isNotEmpty) {
-                    // لاحظ هنا: قمنا بحذف currentUnits من المعاملات
                     BlocProvider.of<TeacherAcademicCubit>(context).addLesson(
                       subjectId: widget.subjectId,
                       term: widget.term,
@@ -92,7 +88,6 @@ void _openAddLessonBottomSheet() { // حذفنا المعامل هنا
         return Scaffold(
           backgroundColor: const Color(0xFFF8FAFC),
           floatingActionButton: FloatingActionButton.extended(
-  // 💡 تم تفريغ القوسين هنا لأن الدالة لم تعد تأخذ معاملات
   onPressed: () => _openAddLessonBottomSheet(), 
   backgroundColor: const Color(0xFFE6A100),
   icon: const Icon(Icons.add_rounded, color: Colors.white),
@@ -134,7 +129,6 @@ void _openAddLessonBottomSheet() { // حذفنا المعامل هنا
                                 ),
                                 trailing: const Icon(Icons.settings_suggest_rounded, size: 18, color: Color(0xFF005F61)),
                                 onTap: () {
-                                  // 💎 تمرير البيانات والـ Cubit لايف لشاشة الـ Hub المجمعة 💎
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -167,7 +161,7 @@ void _openAddLessonBottomSheet() { // حذفنا المعامل هنا
                           children: [
                             IconButton(
                               icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18), 
-                              onPressed: () => Navigator.pop(context), // حل مشكلة التجميد هنا
+                              onPressed: () => Navigator.pop(context), 
                             ),
                             const SizedBox(width: 8),
                             Expanded(

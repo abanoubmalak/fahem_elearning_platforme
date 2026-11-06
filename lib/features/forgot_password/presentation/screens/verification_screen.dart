@@ -1,4 +1,3 @@
-// lib/features/auth/presentation/screens/otp_verification_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/auth/presentation/cubit/auth_cubit.dart';
@@ -52,7 +51,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-  // ✅ إلغاء العملية والرجوع لشاشة الدخول
   void _cancelAndGoToLogin() {
     _timer?.cancel();
     FirebaseAuth.instance.signOut().catchError((_) {});
@@ -135,7 +133,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           child: Stack(
                             alignment: Alignment.topCenter,
                             children: [
-                              // ✅ زر الرجوع يستدعي _cancelAndGoToLogin
                               Align(
                                 alignment: Alignment.topRight,
                                 child: IconButton(
@@ -206,7 +203,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                               _canResend
                                   ? TextButton(
                                       onPressed: () {
-                                        cubit.resendOTP(widget.uid, widget.email); // ✅ إعادة إرسال حقيقية
+                                        cubit.resendOTP(widget.uid, widget.email); 
                                         _startTimer();
                                       },
                                       child: const Text(

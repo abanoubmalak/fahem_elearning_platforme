@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/admin_financials_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
@@ -8,7 +7,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class AdminTreasuryScreen extends StatelessWidget {
   const AdminTreasuryScreen({super.key});
 
-  // ── تأكيد الموافقة أو الرفض ──
   void _confirmAction(BuildContext context, {required bool isApprove, required Map<String, dynamic> request}) {
     showDialog(
       context: context,
@@ -101,7 +99,6 @@ class AdminTreasuryScreen extends StatelessWidget {
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            // ── المحتوى ──
             Positioned.fill(
               child: BlocBuilder<AdminCubit, AdminState>(
                 builder: (context, state) {
@@ -229,7 +226,6 @@ class AdminTreasuryScreen extends StatelessWidget {
               ),
             ),
 
-            // ── الهيدر الموحد ──
             Positioned(
               top: 0, left: 0, right: 0, height: headerHeight,
               child: Container(
@@ -242,7 +238,6 @@ class AdminTreasuryScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 8),
                     child: Row(
                       children: [
-                        //IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white), onPressed: () => Navigator.pop(context)),
                         const Text('طلبات السحب المعلّقة', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
                       ],
                     ),

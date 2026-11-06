@@ -1,4 +1,3 @@
-// lib/features/teachers/presentation/screens/contact_teachers_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
@@ -15,13 +14,12 @@ class ContactTeachersScreen extends StatefulWidget {
 
 class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
 
-  // دالة التوجيه - نمرر الـ doc.id مباشرة لضمان التطابق التام مع الداتابيز
   void _startChatWithTeacher(Map<String, dynamic> teacher, String docId, String studentName) {
     Navigator.pushNamed(
       context, 
       Routes.ChatScreen,
       arguments: {
-        'teacherId': docId, // 👈 استخدام الـ Document ID الفعلي للمعلم من الفايربيز
+        'teacherId': docId, 
         'teacherName': teacher['name'] ?? 'معلم',
         'subject': teacher['specialty'] ?? '',
         'studentName': studentName,
@@ -79,14 +77,14 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
             } catch (_) {}
 
             return StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('teachers').snapshots(), // جلب كل المعلمين بدون شروط مؤقتاً لغرض الفحص
+              stream: FirebaseFirestore.instance.collection('teachers').snapshots(), 
               builder: (context, snapshot) {
                 if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
                 final List<Map<String, dynamic>> filteredTeachers = [];
                 for (var doc in snapshot.data!.docs) {
                   final data = doc.data() as Map<String, dynamic>;
-                  data['id'] = doc.id; // ضمان حفظ الـ Document ID الحقيقي للمحادثة
+                  data['id'] = doc.id; 
                   filteredTeachers.add(data);
                 }
 
@@ -100,7 +98,6 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20.0).copyWith(bottom: 110),
                   itemBuilder: (context, index) {
                     final teacher = filteredTeachers[index];
-                    // 💎 التعديل الجوهري: تمرير الـ id والمقاييس الثلاثة كاملة للدالة لتفادي الخطأ
                     return _buildTeacherCard(teacher, teacher['id'] ?? '', currentStudentName);
                   },
                 );
@@ -156,7 +153,7 @@ class _ContactTeachersScreenState extends State<ContactTeachersScreen> {
           ),
           const SizedBox(width: 10),
           ElevatedButton.icon(
-            onPressed: () => _startChatWithTeacher(teacher, docId, studentName), // 👈 تمرير الـ docId الصافي بشكل سليم
+            onPressed: () => _startChatWithTeacher(teacher, docId, studentName), 
             icon: const Icon(Icons.chat_bubble_outline_rounded, size: 14, color: Colors.white),
             label: const Text('مراسلة', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white)),
             style: ElevatedButton.styleFrom(

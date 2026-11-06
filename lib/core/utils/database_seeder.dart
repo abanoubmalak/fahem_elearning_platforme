@@ -1,4 +1,3 @@
-// lib/core/utils/database_seeder.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
@@ -9,7 +8,6 @@ class DatabaseSeeder {
     try {
       final WriteBatch batch = _firestore.batch();
 
-      // ثابتات للتجربة
       const String studentId = 'STUDENT_UID_1';
       const String parentId = 'PARENT_UID_1';
       const String teacherId = 'TEACHER_UID_1';
@@ -20,9 +18,6 @@ class DatabaseSeeder {
       const String lessonId = 'LESSON_ID_1';
       const String questionId = 'QUESTION_ID_1';
 
-      // ---------------------------
-      // 1) users
-      // ---------------------------
       batch.set(
         _firestore.collection('users').doc(studentId),
         {
@@ -67,9 +62,7 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 2) parents
-      // ---------------------------
+ 
       batch.set(
         _firestore.collection('parents').doc(parentId),
         {
@@ -81,9 +74,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 3) students
-      // ---------------------------
       batch.set(
         _firestore.collection('students').doc(studentId),
         {
@@ -102,10 +92,6 @@ class DatabaseSeeder {
         },
         SetOptions(merge: true),
       );
-
-      // ---------------------------
-      // 4) teachers
-      // ---------------------------
       batch.set(
         _firestore.collection('teachers').doc(teacherId),
         {
@@ -129,9 +115,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 5) subjects_content
-      // ---------------------------
       final DocumentReference<Map<String, dynamic>> subjectRef =
           _firestore.collection('subjects_content').doc(subjectDocId);
 
@@ -149,7 +132,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // unit
       final DocumentReference<Map<String, dynamic>> unitRef =
           subjectRef.collection('units').doc(unitId);
 
@@ -164,7 +146,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // lesson
       final DocumentReference<Map<String, dynamic>> lessonRef =
           unitRef.collection('lessons').doc(lessonId);
 
@@ -182,7 +163,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // lesson questions as subcollection
       final DocumentReference<Map<String, dynamic>> questionRef =
           lessonRef.collection('questions').doc(questionId);
 
@@ -199,9 +179,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 6) student_progress
-      // ---------------------------
       batch.set(
         _firestore.collection('student_progress').doc('${studentId}_$lessonId'),
         {
@@ -217,9 +194,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 7) teacher_questions
-      // ---------------------------
       final DocumentReference<Map<String, dynamic>> teacherQuestionRef =
           _firestore.collection('teacher_questions').doc();
 
@@ -237,9 +211,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 8) transactions
-      // ---------------------------
       final DocumentReference<Map<String, dynamic>> transactionRef =
           _firestore.collection('transactions').doc();
 
@@ -261,9 +232,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // ---------------------------
-      // 9) withdrawal_requests
-      // ---------------------------
       final DocumentReference<Map<String, dynamic>> withdrawalRef =
           _firestore.collection('withdrawal_requests').doc();
 
@@ -280,7 +248,6 @@ class DatabaseSeeder {
         SetOptions(merge: true),
       );
 
-      // تنفيذ
       await batch.commit();
 
       if (context != null && context.mounted) {

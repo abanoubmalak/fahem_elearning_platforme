@@ -1,4 +1,3 @@
-// lib/features/auth/presentation/cubit/auth_cubit.dart
 import 'dart:math';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -36,7 +35,6 @@ class AuthCubit extends Cubit<AuthState> {
       final String normalizedEmail = tempEmail!.trim().toLowerCase();
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-      // ✅ توليد الـ OTP قبل أي عملية
       String generatedOtp = (1000 + Random().nextInt(9000)).toString();
 
       User? user;
@@ -101,7 +99,6 @@ class AuthCubit extends Cubit<AuthState> {
       }
 
       if (user != null) {
-        // ✅ حفظ الـ OTP في Firestore عشان verifyOTP يقدر يتحقق منه
         await firestore.collection('users').doc(user.uid).update({
           'otp_code': generatedOtp,
           'otp_created_at': FieldValue.serverTimestamp(),
@@ -149,7 +146,6 @@ class AuthCubit extends Cubit<AuthState> {
     }
   }
 
-  // ✅ verifyOTP يجيب الكود من Firestore ويقارنه بدل ما يعتمد على AuthService فقط
   Future<void> verifyOTP(String uid, String enteredCode) async {
     emit(AuthLoading());
     try {
@@ -170,13 +166,12 @@ class AuthCubit extends Cubit<AuthState> {
         return;
       }
 
-      // ✅ الكود صح — نفعّل الحساب ونمسح الكود القديم
       WriteBatch batch = firestore.batch();
 
       batch.update(firestore.collection('users').doc(uid), {
         'is_active': true,
         'isActive': true,
-        'otp_code': FieldValue.delete(), // مسح الكود بعد الاستخدام للأمان
+        'otp_code': FieldValue.delete(), 
         'otp_created_at': FieldValue.delete(),
       });
 
@@ -216,7 +211,6 @@ class AuthCubit extends Cubit<AuthState> {
         final bool isActive = (data?['is_active'] == true) || (data?['isActive'] == true);
 
         if (!isActive) {
-          // ✅ إرسال كود OTP جديد للمستخدم الغير مفعّل بدل ما نبعته فاضي
           final String newOtp = (1000 + Random().nextInt(9000)).toString();
           await FirebaseFirestore.instance.collection('users').doc(uid).update({
             'otp_code': newOtp,

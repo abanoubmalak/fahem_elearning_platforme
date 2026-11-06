@@ -1,4 +1,3 @@
-// lib/features/home/widgets/next_lesson_card.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 

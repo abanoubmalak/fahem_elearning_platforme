@@ -1,4 +1,3 @@
-// lib/features/lessons/presentation/screens/subject_details_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/lessons/presentation/screens/lessom_summery_screen.dart';
 import 'package:fahem/features/lessons/presentation/widgets/video_player_screen.dart';
@@ -148,7 +147,6 @@ class SubjectDetailsScreen extends StatelessWidget {
                                             lessonTitle: lesson['title'] ?? 'فيديو الدرس',
                                             videoUrl: videoUrl, 
                                             questions: lessonQuiz, 
-                                            // 👈 تمرير المتغيرات لضمان الحفظ في المادة الصحيحة
                                             subjectId: subjectId,
                                             studentTerm: studentTerm,
                                           ),
@@ -165,7 +163,6 @@ class SubjectDetailsScreen extends StatelessWidget {
                                         return;
                                       }
 
-                                      // 👈 توحيد الانتقال لـ MaterialPageRoute لحل كل مشاكل الراوتر
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(

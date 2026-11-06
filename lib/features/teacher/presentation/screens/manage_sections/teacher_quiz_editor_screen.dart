@@ -1,10 +1,9 @@
-// lib/features/teacher/presentation/screens/manage_sections/teacher_quiz_editor_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
 class TeacherQuizEditorScreen extends StatefulWidget {
   final String lessonName;
-  final List<dynamic>? initialQuiz; // استقبال الـ quiz (قائمة الأسئلة)
+  final List<dynamic>? initialQuiz; 
   
   const TeacherQuizEditorScreen({
     super.key, 
@@ -17,7 +16,6 @@ class TeacherQuizEditorScreen extends StatefulWidget {
 }
 
 class _TeacherQuizEditorScreenState extends State<TeacherQuizEditorScreen> {
-  // استخدام اسم متغير واضح يطابق هيكل قاعدة البيانات
   late List<Map<String, dynamic>> _quizData;
 
   @override
@@ -70,7 +68,6 @@ class _TeacherQuizEditorScreenState extends State<TeacherQuizEditorScreen> {
                   SizedBox(width: double.infinity, height: 48, child: ElevatedButton(onPressed: () {
                     if (questionController.text.trim().isEmpty || optionControllers.any((c) => c.text.trim().isEmpty)) return;
                     setState(() {
-                      // 💎 هنا يتم تشكيل الـ Map تماماً كما طلبت للداتابيز
                       final newQ = {
                         'question': questionController.text.trim(), 
                         'options': optionControllers.map((c) => c.text.trim()).toList(), 
@@ -93,7 +90,6 @@ class _TeacherQuizEditorScreenState extends State<TeacherQuizEditorScreen> {
   Widget build(BuildContext context) {
     final double headerHeight = (MediaQuery.of(context).size.height * 0.20) - 20;
 
-    // 💎 استخدام PopScope لضمان رجوع البيانات حتى لو سحب الشاشة أو استخدم أزرار النظام
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {

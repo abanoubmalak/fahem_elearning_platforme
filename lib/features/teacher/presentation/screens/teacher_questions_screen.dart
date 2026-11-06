@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/screens/dashboard/teacher_questions_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,6 @@ class TeacherQuestionsScreen extends StatefulWidget {
 
 class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
   
-  // دالة فتح صندوق كتابة الرد الأكاديمي للطالب
   void _openReplyBottomSheet(Map<String, dynamic> questionData) {
     final TextEditingController replyController = TextEditingController();
     
@@ -45,9 +43,8 @@ class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
                 child: ElevatedButton.icon(
                   onPressed: () {
                     if (replyController.text.trim().isNotEmpty) {
-                      // 👈 استخدام الـ context الأصلي الممرر بنجاح للوصول للـ Cubit
                       BlocProvider.of<TeacherCubit>(context).replyToQuestion(questionData['id'], replyController.text.trim());
-                      Navigator.pop(sheetContext); // 👈 إغلاق الشيت بسياقه المخصص والأمن
+                      Navigator.pop(sheetContext); 
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('تم إرسال الرد للطالب بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)));
                     }
                   },
@@ -73,7 +70,6 @@ class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            // ==================== 1. ترويسة الشاشة الثابتة هندسياً ومنع الوميض البصري ====================
             Positioned(
               top: 0, left: 0, right: 0, height: headerHeight - 20,
               child: Container(
@@ -93,7 +89,6 @@ class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
               ),
             ),
 
-            // ==================== 2. منطقة عرض الأسئلة التفاعلية حياً من السيرفر ====================
             Positioned.fill(
               child: BlocBuilder<TeacherCubit, TeacherState>(
                 builder: (context, state) {
@@ -138,7 +133,6 @@ class _TeacherQuestionsScreenState extends State<TeacherQuestionsScreen> {
                               const SizedBox(height: 12),
                               Text(q['question'] ?? '', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.grey[800], height: 1.5)),
                               
-                              // 💎 حقن وعرض نص الإجابة السحابية للمعلم في حالة تم الرد بنجاح 💎
                               if (isReplied && q['reply'] != null && q['reply'].toString().trim().isNotEmpty) ...[
                                 const SizedBox(height: 12),
                                 Container(

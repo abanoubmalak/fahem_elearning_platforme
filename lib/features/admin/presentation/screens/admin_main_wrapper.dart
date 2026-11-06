@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/admin_main_wrapper.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 import 'package:fahem/features/admin/presentation/screens/admin_dashboard_screen.dart';
@@ -23,7 +22,7 @@ class _AdminMainWrapperState extends State<AdminMainWrapper> {
     const AdminDashboardScreen(),
     const AdminTeachersManagementScreen(),
     const AdminStudentsManagementScreen(),
-    const AdminParentsManagementScreen(), // 👈 القسم الجديد
+    const AdminParentsManagementScreen(),
     const AdminTreasuryScreen(),
   ];
 

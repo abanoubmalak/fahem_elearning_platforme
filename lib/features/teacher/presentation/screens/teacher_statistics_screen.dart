@@ -49,7 +49,6 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
                           const Text('المواد والدورات المسندة', style: TextStyle(fontFamily: 'Cairo', fontSize: 16, fontWeight: FontWeight.bold, color: AppColors.textMain)),
                           const SizedBox(height: 16),
                           
-                          // عرض قائمة الكورسات
                           assignedCourses.isEmpty 
                             ? const Text('لا توجد مواد مسندة حالياً', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey))
                             : ListView.separated(
@@ -102,7 +101,6 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
     );
   }
 
-  // بطاقة عرض تفاصيل المادة
   Widget _buildCourseCard(dynamic course) {
     String subjectName = course['subject'].toString() == 'sci' ? 'العلوم' : (course['subject'] ?? 'غير محدد');
     String stage = course['stage'] ?? '';
@@ -141,7 +139,6 @@ class _TeacherStatisticsScreenState extends State<TeacherStatisticsScreen> {
     );
   }
 
-  // بطاقة إجمالي الطلاب
   Widget _buildStatCard({required String title, required String value, required IconData icon, required Color color}) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),

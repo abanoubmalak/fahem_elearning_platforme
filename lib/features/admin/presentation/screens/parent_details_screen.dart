@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/parents/parent_details_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:flutter/material.dart';
@@ -28,31 +27,69 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
       builder: (ctx) => Directionality(
         textDirection: TextDirection.rtl,
         child: AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: const Text('حذف ولي الأمر', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
-          content: Text('هل أنت متأكد من حذف الحساب الخاص بـ "${_parent['name']}"؟', style: const TextStyle(fontFamily: 'Cairo')),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text(
+            'حذف ولي الأمر',
+            style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+          ),
+          content: Text(
+            'هل أنت متأكد من حذف الحساب الخاص بـ "${_parent['name']}"؟',
+            style: const TextStyle(fontFamily: 'Cairo'),
+          ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إلغاء', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text(
+                'إلغاء',
+                style: TextStyle(fontFamily: 'Cairo', color: Colors.grey),
+              ),
+            ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(ctx); // قفل نافذة التأكيد أولاً
+                Navigator.pop(ctx);
 
-                final error = await context.read<AdminCubit>().deleteParent(_parent['id']);
+                final error = await context.read<AdminCubit>().deleteParent(
+                  _parent['id'],
+                );
 
                 if (!mounted) return;
 
                 if (error == null) {
-                  Navigator.pop(context, {'action': 'delete', 'id': _parent['id']});
+                  Navigator.pop(context, {
+                    'action': 'delete',
+                    'id': _parent['id'],
+                  });
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('تم الحذف بنجاح', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                    const SnackBar(
+                      content: Text(
+                        'تم الحذف بنجاح',
+                        style: TextStyle(fontFamily: 'Cairo'),
+                      ),
+                      backgroundColor: Colors.redAccent,
+                    ),
                   );
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(error, style: const TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
+                    SnackBar(
+                      content: Text(
+                        error,
+                        style: const TextStyle(fontFamily: 'Cairo'),
+                      ),
+                      backgroundColor: Colors.redAccent,
+                    ),
                   );
                 }
               },
-              child: const Text('حذف نهائياً', style: TextStyle(fontFamily: 'Cairo', color: Colors.redAccent, fontWeight: FontWeight.bold)),
+              child: const Text(
+                'حذف نهائياً',
+                style: TextStyle(
+                  fontFamily: 'Cairo',
+                  color: Colors.redAccent,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ],
         ),
@@ -79,22 +116,76 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                   children: [
                     Container(
                       padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.grey.shade200), boxShadow: [BoxShadow(color: Colors.black.withAlpha((0.02 * 255).toInt()), blurRadius: 10, offset: const Offset(0, 4))]),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.grey.shade200),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha((0.02 * 255).toInt()),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
                       child: Column(
                         children: [
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              CircleAvatar(radius: 35, backgroundColor: const Color(0xFFEAFAF1), child: const Icon(Icons.family_restroom_rounded, size: 30, color: Color(0xFF27AE60))),
-                              Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: isActive ? const Color(0xFFE8F5E9) : const Color(0xFFFFEBEE), borderRadius: BorderRadius.circular(12)), child: Text(isActive ? 'حساب نشط' : 'حساب موقوف', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: isActive ? Colors.green.shade700 : Colors.red.shade700))),
+                              CircleAvatar(
+                                radius: 35,
+                                backgroundColor: const Color(0xFFEAFAF1),
+                                child: const Icon(
+                                  Icons.family_restroom_rounded,
+                                  size: 30,
+                                  color: Color(0xFF27AE60),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isActive
+                                      ? const Color(0xFFE8F5E9)
+                                      : const Color(0xFFFFEBEE),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Text(
+                                  isActive ? 'حساب نشط' : 'حساب موقوف',
+                                  style: TextStyle(
+                                    fontFamily: 'Cairo',
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    color: isActive
+                                        ? Colors.green.shade700
+                                        : Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 16),
-                          Align(alignment: Alignment.centerRight, child: Text(_parent['name'] ?? 'بدون اسم', style: const TextStyle(fontFamily: 'Cairo', fontSize: 20, fontWeight: FontWeight.bold, color: AppColors.textMain))),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: Text(
+                              _parent['name'] ?? 'بدون اسم',
+                              style: const TextStyle(
+                                fontFamily: 'Cairo',
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.textMain,
+                              ),
+                            ),
+                          ),
                           const Divider(height: 30),
-                          // 👈 تم إزالة سطر الموبايل والاعتماد على الإيميل فقط 
-                          _buildInfoRow(Icons.email_outlined, _parent['email'] ?? 'لا يوجد بريد إلكتروني'),
+                          _buildInfoRow(
+                            Icons.email_outlined,
+                            _parent['email'] ?? 'لا يوجد بريد إلكتروني',
+                          ),
                         ],
                       ),
                     ),
@@ -106,19 +197,39 @@ class _ParentDetailsScreenState extends State<ParentDetailsScreen> {
                           child: SizedBox(
                             height: 52,
                             child: ElevatedButton.icon(
-onPressed: () async {
-  final updated = await Navigator.pushNamed(
-    context,
-    Routes.EditParentScreen,
-    arguments: _parent,
-  );
+                              onPressed: () async {
+                                final updated = await Navigator.pushNamed(
+                                  context,
+                                  Routes.EditParentScreen,
+                                  arguments: _parent,
+                                );
 
-  if (updated != null && updated is Map<String, dynamic> && mounted) {
-    setState(() => _parent = updated);
-  }
-},                              icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
-                              label: const Text('تعديل البيانات', style: TextStyle(fontFamily: 'Cairo', fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
-                              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF27AE60), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
+                                if (updated != null &&
+                                    updated is Map<String, dynamic> &&
+                                    mounted) {
+                                  setState(() => _parent = updated);
+                                }
+                              },
+                              icon: const Icon(
+                                Icons.edit_rounded,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              label: const Text(
+                                'تعديل البيانات',
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF27AE60),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -129,8 +240,17 @@ onPressed: () async {
                             height: 52,
                             child: OutlinedButton(
                               onPressed: _confirmDelete,
-                              style: OutlinedButton.styleFrom(foregroundColor: Colors.redAccent, side: const BorderSide(color: Colors.redAccent), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14))),
-                              child: const Icon(Icons.delete_outline_rounded, size: 24),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.redAccent,
+                                side: const BorderSide(color: Colors.redAccent),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.delete_outline_rounded,
+                                size: 24,
+                              ),
                             ),
                           ),
                         ),
@@ -141,14 +261,41 @@ onPressed: () async {
               ),
             ),
             Positioned(
-              top: 0, left: 0, right: 0, height: headerHeight,
+              top: 0,
+              left: 0,
+              right: 0,
+              height: headerHeight,
               child: Container(
-                decoration: const BoxDecoration(gradient: LinearGradient(colors: [Color(0xFF005F61), Color(0xFF003D3F)], begin: Alignment.topRight, end: Alignment.bottomLeft), borderRadius: BorderRadius.only(bottomLeft: Radius.circular(30), bottomRight: Radius.circular(30))),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Color(0xFF005F61), Color(0xFF003D3F)],
+                    begin: Alignment.topRight,
+                    end: Alignment.bottomLeft,
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(30),
+                    bottomRight: Radius.circular(30),
+                  ),
+                ),
                 child: SafeArea(
                   child: Row(
                     children: [
-                      IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white), onPressed: () => Navigator.pop(context)),
-                      const Text('تفاصيل ولي الأمر', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new_rounded,
+                          color: Colors.white,
+                        ),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                      const Text(
+                        'تفاصيل ولي الأمر',
+                        style: TextStyle(
+                          fontFamily: 'Cairo',
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -165,7 +312,16 @@ onPressed: () async {
       children: [
         Icon(icon, size: 20, color: Colors.grey.shade500),
         const SizedBox(width: 12),
-        Expanded(child: Text(text, style: TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.grey.shade700))),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontFamily: 'Cairo',
+              fontSize: 14,
+              color: Colors.grey.shade700,
+            ),
+          ),
+        ),
       ],
     );
   }

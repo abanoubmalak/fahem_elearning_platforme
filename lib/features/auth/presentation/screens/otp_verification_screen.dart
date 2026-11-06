@@ -1,4 +1,3 @@
-// lib/features/auth/presentation/screens/otp_verification_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/auth/presentation/cubit/auth_cubit.dart';
@@ -52,11 +51,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-  // ✅ إلغاء العملية وتسجيل الخروج والرجوع لشاشة الدخول
   Future<void> _cancelAndGoToLogin() async {
     _timer?.cancel();
     try {
-      await FirebaseAuth.instance.signOut(); // تسجيل خروج الحساب المعلّق
+      await FirebaseAuth.instance.signOut(); 
     } catch (_) {}
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
@@ -80,7 +78,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     final cubit = BlocProvider.of<AuthCubit>(context);
 
     return PopScope(
-      canPop: false, // ✅ منع الرجوع بزر الجهاز إلا عبر دالتنا
+      canPop: false, 
       onPopInvoked: (didPop) {
         if (!didPop) _cancelAndGoToLogin();
       },
@@ -138,7 +136,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                           child: Stack(
                             alignment: Alignment.topCenter,
                             children: [
-                              // ✅ زر الرجوع يستدعي _cancelAndGoToLogin
                               Align(
                                 alignment: Alignment.topRight,
                                 child: IconButton(

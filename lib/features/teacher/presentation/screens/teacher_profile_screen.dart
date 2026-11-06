@@ -1,9 +1,8 @@
-// lib/features/teacher/presentation/screens/teacher_profile_screen.dart
 import 'package:fahem/core/constants/colors.dart';
-import 'package:fahem/core/routing/routes.dart'; // 👈 استيراد راوتر التطبيق بالتوازي
+import 'package:fahem/core/routing/routes.dart'; 
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 استيراد الأوث للتعامل مع الحساب
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور لجلب وتحديث البيانات
+import 'package:firebase_auth/firebase_auth.dart'; 
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TeacherProfileScreen extends StatefulWidget {
   const TeacherProfileScreen({super.key});
@@ -15,7 +14,6 @@ class TeacherProfileScreen extends StatefulWidget {
 class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // متحكمات الحقول الموصولة بالداتابيز حياً
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
@@ -41,10 +39,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     _newPasswordController = TextEditingController();
     _confirmPasswordController = TextEditingController();
 
-    _loadTeacherProfileData(); // 👈 جلب بيانات تخصص وتواصل المعلم حياً من الفايربيز
+    _loadTeacherProfileData();
   }
 
-  // 💎 دالة جلب وقراءة بيانات المعلم الحالية من قاعدة البيانات السحابية حياً
   void _loadTeacherProfileData() async {
     try {
       final User? currentUser = FirebaseAuth.instance.currentUser;
@@ -82,14 +79,12 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     super.dispose();
   }
 
-  // 💎 دالة حفظ تعديلات التواصل والأمان وتوطين الأخطاء والتوجيه المباشر
   void _saveProfileData() async {
     if (!_formKey.currentState!.validate()) return;
 
     String oldPass = _oldPasswordController.text;
     String newPass = _newPasswordController.text;
 
-    // التحقق الاستباقي لو أراد المعلم تغيير الباسورد
     if (oldPass.isNotEmpty || newPass.isNotEmpty) {
       if (oldPass.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('يرجى إدخال كلمة المرور الحالية أولاً.', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent));
@@ -105,15 +100,13 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) return;
 
-      // 1. تحديث رقم الهاتف للتواصل المباشر في الفايرستور
       await FirebaseFirestore.instance.collection('teachers').doc(currentUser.uid).update({
         'phone': _phoneController.text.trim(),
       });
 
-      // 2. تحديث الباسورد في الـ Authentication لو تم إدخاله
       if (newPass.isNotEmpty && oldPass.isNotEmpty) {
         AuthCredential credential = EmailAuthProvider.credential(email: currentUser.email!, password: oldPass);
-        await currentUser.reauthenticateWithCredential(credential); // إعادة المصادقة للتأكد من هويته
+        await currentUser.reauthenticateWithCredential(credential); 
         await currentUser.updatePassword(newPass.trim());
       }
 
@@ -122,11 +115,9 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
           const SnackBar(content: Text('تم تحديث بيانات الأمان والتواصل بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF005F61)),
         );
 
-        // ↩️ التوجيه التلقائي الفوري للشاشة الرئيسية للمعلم بعد التحديث المستقر
         Navigator.pushNamedAndRemoveUntil(context, Routes.TeacherMainWrapper, (route) => false);
       }
     } on FirebaseAuthException catch (e) {
-      // 💎 التقاط وترجمة خطأ كلمة المرور الحالية لمنع الأكواد المزعجة أمام اللجنة
       String friendlyMessage = 'حدث خطأ أثناء حفظ التعديلات الرقمية.';
       if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         friendlyMessage = 'كلمة المرور الحالية التي أدخلتها غير صحيحة ❌';
@@ -147,7 +138,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
     );
   }
 
-  // 💎 دالة تسجيل الخروج الرسمية وتطهير الجلسة
   void _logout() {
     showDialog(
       context: context,
@@ -168,7 +158,7 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         TextButton(
           onPressed: () async {
             Navigator.pop(ctx);
-            await FirebaseAuth.instance.signOut(); // إنهاء الجلسة سحابياً
+            await FirebaseAuth.instance.signOut(); 
             if (mounted) {
               Navigator.pushNamedAndRemoveUntil(context, Routes.loginScreen, (route) => false);
             }
@@ -190,7 +180,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            // ==================== 1. جسم الشاشة (في الخلفية أولاً) ====================
             Positioned.fill(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -353,7 +342,6 @@ class _TeacherProfileScreenState extends State<TeacherProfileScreen> {
               ),
             ),
 
-            // ==================== 2. البانر الفيروزي العلوي (في المقدمة آخراً) ====================
             Positioned(
               top: 0, left: 0, right: 0, height: headerHeight - 60,
               child: Container(

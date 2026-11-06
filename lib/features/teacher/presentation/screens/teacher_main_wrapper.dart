@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/screens/teacher_main_wrapper.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/screens/teacher_dashboard_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/teacher_profits_screen.dart';
@@ -18,7 +17,6 @@ class TeacherMainWrapper extends StatefulWidget {
 class _TeacherMainWrapperState extends State<TeacherMainWrapper> {
   int _currentTabIndex = 0;
 
-  // القائمة المعتمدة للتبويبات الأربعة المربوطة بالـ Cubit المركزي
   final List<Widget> _tabs = [
     const TeacherSubjectsTab(),
     const TeacherQuestionsScreen(),
@@ -30,7 +28,6 @@ class _TeacherMainWrapperState extends State<TeacherMainWrapper> {
   Widget build(BuildContext context) {
     return Directionality(
       textDirection: TextDirection.rtl,
-      // 💎 تغليف المنظومة بالكامل وحقن الـ Cubit حياً فور فتح بوابة المعلم 💎
       child: BlocProvider(
         create: (context) => TeacherCubit()..fetchTeacherDashboard(),
         child: Scaffold(

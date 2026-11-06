@@ -1,6 +1,5 @@
-// lib/features/performance/presentation/screens/performance_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart'; // 👈 استدعاء الأوث لمعرفة الطالب الحالي
+import 'package:firebase_auth/firebase_auth.dart'; 
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
@@ -42,14 +41,12 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // 💎 تحديد هوية الطالب الحالي لنجلب بياناته هو فقط
     final String currentStudentId = FirebaseAuth.instance.currentUser?.uid ?? '';
 
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        // 💎 التعديل المنطقي: قراءة جدول تقدم الطالب بدلاً من جدول المنهج 💎
         body: StreamBuilder<QuerySnapshot>(
           stream: FirebaseFirestore.instance
               .collection('student_progress')
@@ -59,7 +56,6 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
             }
-            // إذا لم يقم الطالب بأي نشاط بعد
             if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
               return const Center(
                 child: Text(
@@ -72,7 +68,6 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
             double totalOverallScore = 0.0;
             Map<String, Map<String, dynamic>> aggregatedData = {};
 
-            // 1. تجميع بيانات الطالب حسب المادة
             for (var doc in snapshot.data!.docs) {
               final data = doc.data() as Map<String, dynamic>;
               String subjectId = data['subjectId'] ?? 'unknown';
@@ -84,7 +79,6 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
 
               bool isWatched = data['isVideoWatched'] ?? false;
               double quiz = (data['quizScore'] ?? 0.0).toDouble();
-              // توحيد النسبة لتكون من 0 إلى 1 (لأن الدرجة قد تكون من 10)
               if (quiz > 1.0) quiz = quiz / 10.0; 
 
               aggregatedData[subjectName]!['watchCount'] += isWatched ? 1.0 : 0.0;
@@ -92,7 +86,6 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               aggregatedData[subjectName]!['total'] += 1;
             }
 
-            // 2. حساب المتوسطات لكل مادة وتجهيزها للواجهة
             List<Map<String, dynamic>> dynamicSubjectList = [];
             aggregatedData.forEach((name, stats) {
               int count = stats['total'];
@@ -109,12 +102,10 @@ class _PerformanceScreenState extends State<PerformanceScreen> {
               });
             });
 
-            // 3. حساب النسبة الكلية للوحة العلوية
             double overallScore = dynamicSubjectList.isNotEmpty 
                 ? (totalOverallScore / dynamicSubjectList.length) 
                 : 0.0;
 
-            // ================== التصميم بالأسفل ثابت 100% ==================
             return Column(
               children: [
                 Container(

@@ -17,13 +17,7 @@ class ResetSuccessScreen extends StatelessWidget {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  // ClipRRect(
-                  //     borderRadius: BorderRadius.circular(1),
-                  //     child: Image.asset("assets/images/logo.png",
-                  //       width: 150,
-                  //       height: 150 ,
-                  //     ),
-                  //   ),
+                
 
                   const SizedBox(height: 30),
 
@@ -43,7 +37,7 @@ class ResetSuccessScreen extends StatelessWidget {
                   Container(
                   padding: const EdgeInsets.all(25),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFE0F2F1), // لون فيروزي فاتح جداً
+                    color: const Color(0xFFE0F2F1), 
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(

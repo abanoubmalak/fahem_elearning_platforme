@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/teachers/add_teacher_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
@@ -6,9 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ─────────────────────────────────────────────
-//  نموذج بيانات المادة المعيّنة
-// ─────────────────────────────────────────────
+
 class _AssignedSubject {
   final String subject;
   final String stage;
@@ -27,9 +24,6 @@ class _AssignedSubject {
       subject == other.subject && stage == other.stage && term == other.term;
 }
 
-// ─────────────────────────────────────────────
-//  الشاشة الرئيسية
-// ─────────────────────────────────────────────
 class AddTeacherScreen extends StatefulWidget {
   const AddTeacherScreen({super.key});
 
@@ -82,14 +76,12 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
   'دراسات اجتماعية': 'social',
 };
 
-  // دالة ذكية لفلترة المواد بناءً على المحجوز في الداتابيز
   List<String> _getAvailableSubjects(AdminState state) {
     if (_selectedStage == null || _selectedTerm == null) return [];
     
     List<String> baseSubjects = _subjectsByStage[_selectedStage!] ?? [];
     Set<String> takenSubjects = {};
 
-    // 1. استخراج المواد المحجوزة من المعلمين الموجودين في الفايربيز
    if (state is AdminLoaded) {
   for (var teacher in state.teachers) {
     List courses = teacher['assignedCourses'] ?? [];
@@ -114,14 +106,12 @@ class _AddTeacherScreenState extends State<AddTeacherScreen> {
   }
 }
 
-    // 2. استخراج المواد التي قام الأدمن باختيارها في نفس الشاشة قبل الحفظ
     for (var assigned in _assignedSubjects) {
       if (assigned.stage == _selectedStage && assigned.term == _selectedTerm) {
         takenSubjects.add(assigned.subject);
       }
     }
 
-    // إرجاع المواد المتاحة فقط
     return baseSubjects.where((sub) => !takenSubjects.contains(sub)).toList();
   }
 
@@ -161,7 +151,7 @@ Set<String> _getTakenSubjects(AdminState state) {
 
     setState(() {
       _assignedSubjects.add(newEntry);
-      _selectedSubject = null; // إعادة تصفير المادة لاختيار غيرها
+      _selectedSubject = null; 
     });
   }
 
@@ -265,7 +255,6 @@ Future<void> _saveTeacher() async {
             Positioned.fill(
               child: BlocBuilder<AdminCubit, AdminState>(
                 builder: (context, state) {
-                  // استدعاء الفلترة الذكية
                   List<String> availableSubjects = _getAvailableSubjects(state);
 
                   return SingleChildScrollView(
@@ -290,21 +279,18 @@ Future<void> _saveTeacher() async {
                           _buildSectionTitle('إضافة مادة دراسية'),
                           const SizedBox(height: 10),
 
-                          // 1. اختيار المرحلة أولاً
                           _buildDropdown(
                             label: 'المرحلة الدراسية', icon: Icons.school_rounded, items: _stages, value: _selectedStage,
                             onChanged: (val) => setState(() { _selectedStage = val; _selectedSubject = null; }),
                           ),
                           const SizedBox(height: 10),
 
-                          // 2. اختيار الترم ثانياً
                           _buildDropdown(
                             label: 'الترم', icon: Icons.calendar_month_rounded, items: _terms, value: _selectedTerm,
                             onChanged: (val) => setState(() { _selectedTerm = val; _selectedSubject = null; }),
                           ),
                           const SizedBox(height: 10),
 
-                          // 3. اختيار المادة المفلترة + زر الإضافة
                           Row(
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [

@@ -1,4 +1,3 @@
-// lib/features/home/presentation/cubit/student_cubit.dart
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -59,15 +58,10 @@ class StudentCubit extends Cubit<StudentState> {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 💎 خريطة تحويل: الـ id الداخلي في SubjectProvider قد يختلف عن
-  // الـ prefix المستخدم فعلياً في فايربيز (unlockedPackages / subjects_content).
-  // مثال: مادة اللغة العربية id داخلي = 'ar' لكن المخزن في فايربيز 'arabic'.
-  // أي مادة مش موجودة هنا، هيتم استخدام sub.id كما هو بدون تغيير.
   static const Map<String, String> _firestoreSubjectIdMap = {
     'ar': 'arabic',
   };
 
-  // 👈 دالة موحّدة لحساب الـ id المستخدم فعلياً في فايربيز لأي مادة
   String _firestoreSubjectId(String localId) {
     return _firestoreSubjectIdMap[localId] ?? localId;
   }
@@ -120,12 +114,10 @@ class StudentCubit extends Cubit<StudentState> {
       List<dynamic> unlockedPackages = data['unlockedPackages'] ?? [];
       bool liveSubscription = unlockedPackages.isNotEmpty;
 
-      // 1. جلب سجل تقدم الطالب بالكامل
       QuerySnapshot progressSnap = await _firestore.collection('student_progress')
           .where('studentId', isEqualTo: currentUser.uid).get();
       
       double totalScore = 0.0;
-      // خريطة لحساب مجمّع التقدم لكل مادة بشكل مستقل عن الأخرى
       Map<String, double> subjectProgressMap = {};
       Map<String, int> subjectCountMap = {};
 
@@ -139,14 +131,12 @@ class StudentCubit extends Cubit<StudentState> {
           double lessonProgress = (isWatched ? 0.4 : 0) + ((quizScore / 10) * 0.6);
           totalScore += lessonProgress;
 
-          // تجميع القيم حسب المادة لتحديث الـ Progress Bar الخاص بكل مادة
           subjectProgressMap[subId] = (subjectProgressMap[subId] ?? 0.0) + lessonProgress;
           subjectCountMap[subId] = (subjectCountMap[subId] ?? 0) + 1;
         }
         totalScore = totalScore / progressSnap.docs.length; 
       }
 
-      // 2. ربط وحقن التقدم الحقيقي داخل كروت المواد
       List<SubjectModel> rawSubjects = SubjectProvider.getSubjectsByGrade(liveGrade);
       List<SubjectModel> processedSubjects = rawSubjects.map((sub) {
         String stageCode = 'g1';
@@ -154,12 +144,9 @@ class StudentCubit extends Cubit<StudentState> {
         if (liveGrade == 'الصف الثالث الإعدادي') stageCode = 'g3';
         String termCode = liveTerm == 'الترم الأول' ? 't1' : 't2';
 
-        // 💎 استخدام الـ id المطابق لما هو مخزّن فعلياً في فايربيز
         String firestoreId = _firestoreSubjectId(sub.id);
         String packageId = '${firestoreId}_${stageCode}_${termCode}';
 
-        // حساب التقدم الفردي للمادة الحالية بناءً على الداتابيز
-        // (الجلب من student_progress يتم بالـ id المحلي كما هو محفوظ من شاشات الدرس/الاختبار)
         double calculatedSubjectProgress = 0.0;
         if (subjectCountMap.containsKey(sub.id) && subjectCountMap[sub.id]! > 0) {
           calculatedSubjectProgress = subjectProgressMap[sub.id]! / subjectCountMap[sub.id]!;
@@ -168,7 +155,7 @@ class StudentCubit extends Cubit<StudentState> {
         return sub.copyWith(
           isUnlocked: unlockedPackages.contains(packageId),
           packageId: packageId,
-          progress: calculatedSubjectProgress > 0 ? calculatedSubjectProgress : 0.0, // حقن القيمة الحية
+          progress: calculatedSubjectProgress > 0 ? calculatedSubjectProgress : 0.0, 
         );
       }).toList();
 
@@ -233,7 +220,6 @@ class StudentCubit extends Cubit<StudentState> {
         if (newGrade == 'الصف الثالث الإعدادي') stageCode = 'g3';
         String termCode = newTerm == 'الترم الأول' ? 't1' : 't2';
 
-        // 💎 نفس خريطة التحويل هنا أيضاً لضمان التطابق بعد تعديل بيانات الطالب
         String firestoreId = _firestoreSubjectId(sub.id);
         String packageId = '${firestoreId}_${stageCode}_${termCode}';
 

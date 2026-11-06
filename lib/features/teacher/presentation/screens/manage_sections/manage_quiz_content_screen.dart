@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/screens/manage_sections/manage_quiz_content_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/cubit/teacher_academic_cubit.dart';
 import 'package:flutter/material.dart';
@@ -10,7 +9,7 @@ class ManageQuizContentScreen extends StatefulWidget {
   final String unitName;
   final String subjectId;
   final String term;
-  final List<dynamic>? initialQuestions; // هذه هي قائمة الأسئلة (quiz array)
+  final List<dynamic>? initialQuestions; 
 
   const ManageQuizContentScreen({
     super.key,
@@ -31,44 +30,38 @@ class _ManageQuizContentScreenState extends State<ManageQuizContentScreen> {
   @override
   void initState() {
     super.initState();
-    // تهيئة البيانات القادمة من الفايربيز
     _serverQuestions = widget.initialQuestions;
   }
 
-  // دالة التنقل للمحرر
   Future<void> _navigateToEditor() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => TeacherQuizEditorScreen(
           lessonName: widget.lessonName,
-          initialQuiz: _serverQuestions, // تمرير قائمة الاختبار الحالية
+          initialQuiz: _serverQuestions,
         ),
       ),
     );
 
-    // التحقق من أن الشاشة لا تزال موجودة (mounted) وأننا حصلنا على بيانات
     if (result != null && mounted) {
       final List<dynamic> updatedQuestions = result as List<dynamic>;
       
-      // تحديث الفايربيز عبر الكيوبت
       context.read<TeacherAcademicCubit>().updateLessonContent(
   subjectId: widget.subjectId, 
   term: widget.term, 
   unitTitle: widget.unitName, 
   lessonTitle: widget.lessonName,
-  contentType: 'quiz', // 👈 يطابق الحقل السحابي تماماً
+  contentType: 'quiz', 
   contentData: updatedQuestions,
 );
 
-      // تحديث الواجهة فوراً
       setState(() {
         _serverQuestions = updatedQuestions;
       });
     }
   }
 
-  // دالة حذف الاختبار
   void _deleteEntireQuiz() {
     showDialog(
       context: context,
@@ -79,7 +72,6 @@ class _ManageQuizContentScreenState extends State<ManageQuizContentScreen> {
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('إلغاء')),
           TextButton(
             onPressed: () {
-              // إرسال قائمة فارغة للحذف
               context.read<TeacherAcademicCubit>().updateLessonContent(
                 subjectId: widget.subjectId, 
                 term: widget.term, 
@@ -116,7 +108,6 @@ class _ManageQuizContentScreenState extends State<ManageQuizContentScreen> {
                 padding: EdgeInsets.fromLTRB(20, headerHeight + 20, 20, 30),
                 child: Column(
                   children: [
-                    // بطاقة عرض الحالة
                     Container(
                       width: double.infinity, padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(color: hasQuiz ? const Color(0xFFFEF6E5) : const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: hasQuiz ? const Color(0xFFE6A100).withAlpha((0.3 * 255).toInt()) : Colors.grey[300]!, width: 1.5)),
@@ -130,7 +121,6 @@ class _ManageQuizContentScreenState extends State<ManageQuizContentScreen> {
                     ),
                     const SizedBox(height: 35),
                     
-                    // الأزرار
                     if (!hasQuiz)
                       SizedBox(width: double.infinity, height: 50, child: ElevatedButton.icon(onPressed: _navigateToEditor, icon: const Icon(Icons.add_moderator_rounded, color: Colors.white), label: const Text('إنشاء كويز جديد', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)), style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFE6A100), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)))))
                     else ...[
@@ -143,7 +133,6 @@ class _ManageQuizContentScreenState extends State<ManageQuizContentScreen> {
               ),
             ),
             
-            // الهيدر
             Positioned(
               top: 0, left: 0, right: 0, height: headerHeight - 20,
               child: Container(
@@ -155,7 +144,7 @@ class _ManageQuizContentScreenState extends State<ManageQuizContentScreen> {
                       children: [
                         IconButton(icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 18), onPressed: () => Navigator.pop(context)),
                         Expanded(child: Text('إدارة الاختبار', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white, fontSize: 16), textAlign: TextAlign.center)),
-                        const SizedBox(width: 40), // موازنة
+                        const SizedBox(width: 40), 
                       ],
                     ),
                   ),

@@ -1,5 +1,4 @@
-// lib/features/teacher/presentation/screens/teacher_financial_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور لمعالجة الـ Timestamp
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/cubit/teacher_cubit.dart';
 import 'package:flutter/material.dart';
@@ -54,7 +53,6 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
                       final double? amount = double.tryParse(amountController.text.trim());
                       if (amount != null && amount > 0 && amount <= availableBalance) {
                         
-                        // 💎 توحيد مسمى طريقة السحب لتتوافق 100% مع هيكل الداتابيز والـ Seeder 💎
                         final String formalMethod = selectedMethod == 'vodafone' ? 'vodafone_cash' : 'bank_transfer';
                         
                         BlocProvider.of<TeacherCubit>(context).requestWithdrawal(amount, formalMethod);
@@ -127,14 +125,12 @@ class _TeacherFinancialScreenState extends State<TeacherFinancialScreen> {
                             const Center(child: Padding(padding: EdgeInsets.all(30.0), child: Text('لا توجد عمليات اشتراك مسجلة حالياً.', style: TextStyle(fontFamily: 'Cairo', color: Colors.grey, fontWeight: FontWeight.bold)))),
                           
                           ...transactions.map((trans) {
-                            // 💎 فحص وتحويل الـ Timestamp السحابي حياً إلى تاريخ مقروء ومنسق 💎
                             String formattedDate = '';
                             if (trans['createdAt'] != null && trans['createdAt'] is Timestamp) {
                               final DateTime date = (trans['createdAt'] as Timestamp).toDate();
                               formattedDate = '${date.year}/${date.month}/${date.day}';
                             }
 
-                            // جلب صافي ربح المدرس المعتمد من الداتابيز
                             final double teacherNetProfit = (trans['teachersProfit'] ?? 0.0).toDouble();
                             final String transPackageName = trans['packageName'] ?? 'اشتراك باقة العلوم';
 

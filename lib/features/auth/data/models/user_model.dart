@@ -4,9 +4,9 @@ class UserModel {
   final String uid;
   final String name;
   final String email;
-  final String role;         // 'student' أو 'parent'
-  final String? grade;       // خاص بالطالب فقط
-  final String? term;        // خاص بالطالب فقط
+  final String role;         
+  final String? grade;       
+  final String? term;       
   final String otpCode;
   final bool isActive;
   final DateTime? createdAt;
@@ -23,7 +23,6 @@ class UserModel {
     this.createdAt,
   });
 
-  // تحويل الكائن إلى Map لرفعه إلى قاعدة البيانات Firestore
   Map<String, dynamic> toMap() {
     return {
       'uid': uid,

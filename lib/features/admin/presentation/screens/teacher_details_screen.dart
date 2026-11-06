@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/teachers/teacher_details_screen.dart
 
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
@@ -6,9 +5,6 @@ import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ─────────────────────────────────────────────
-// نموذج بيانات المادة
-// ─────────────────────────────────────────────
 class AssignedSubject {
   final String subject;
   final String stage;
@@ -21,9 +17,6 @@ class AssignedSubject {
   });
 }
 
-// ─────────────────────────────────────────────
-// شاشة عرض التفاصيل
-// ─────────────────────────────────────────────
 class TeacherDetailsScreen extends StatefulWidget {
   final Map<String, dynamic> teacherData;
 

@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/admin_profile_screen.dart
 import 'package:fahem/core/routing/routes.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -48,7 +47,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
 
       final firestore = FirebaseFirestore.instance;
 
-      // بما أن الـ Document ID عندك هو UID، نقرأ مباشرة من users/{uid}
       final doc = await firestore.collection('users').doc(currentUser.uid).get();
 
       if (!mounted) return;
@@ -160,7 +158,6 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
       final firestore = FirebaseFirestore.instance;
       final targetDocId = _userDocId ?? currentUser.uid;
 
-      // تحديث البيانات في users/{uid}
       await firestore.collection('users').doc(targetDocId).set({
         'name': name,
         'uid': currentUser.uid,
@@ -168,10 +165,8 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
         'role': 'admin',
       }, SetOptions(merge: true));
 
-      // تحديث الاسم في Firebase Auth
       await currentUser.updateDisplayName(name);
 
-      // تحديث كلمة المرور لو تم إدخالها
       if (newPass.isNotEmpty && oldPass.isNotEmpty) {
         final credential = EmailAuthProvider.credential(
           email: currentUser.email!,

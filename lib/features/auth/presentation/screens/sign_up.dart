@@ -1,8 +1,3 @@
-// 
-
-
-
-
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/helpers/app_validator.dart';
 import 'package:fahem/core/routing/routes.dart';

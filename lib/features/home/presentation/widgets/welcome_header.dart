@@ -1,9 +1,7 @@
-// lib/features/home/widgets/home_header.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/home/presentation/cubit/student_cubit.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomeHeader extends StatelessWidget {
@@ -21,7 +19,6 @@ class HomeHeader extends StatelessWidget {
       children: [
         Row(
           children: [
-            // دائرة الصورة الشخصية
             CircleAvatar(
               radius: 22,
               backgroundColor: Colors.grey[200],
@@ -38,7 +35,6 @@ class HomeHeader extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 12),
-            // نص الترحيب
             Text(
               'أهلاً، $userName!',
               style: const TextStyle(
@@ -50,15 +46,7 @@ class HomeHeader extends StatelessWidget {
             ),
           ],
         ),
-        // أيقونة التنبيهات مع اللون الذهبي التنبيهي
-        // IconButton(
-        //   icon: const Icon(
-        //     Icons.notifications_none_rounded,
-        //     size: 28,
-        //     color: AppColors.primaryLight, // استخدام لون التنبيه الموحد
-        //   ),
-        //   onPressed: () {},
-        // ),
+   
       ],
     );
   }

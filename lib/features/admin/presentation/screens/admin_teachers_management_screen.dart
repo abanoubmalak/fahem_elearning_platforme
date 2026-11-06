@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/teachers/admin_teachers_management_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
@@ -20,7 +19,7 @@ class _AdminTeachersManagementScreenState extends State<AdminTeachersManagementS
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
       floatingActionButton: FloatingActionButton.extended(
-        heroTag: "fab_teachers_management_unique", // 👈 تأمين الهيرو تاغ من التضارب
+        heroTag: "fab_teachers_management_unique", 
         onPressed: () => Navigator.pushNamed(context, Routes.AddTeacherScreen),
         backgroundColor: const Color(0xFF005F61),
         icon: const Icon(Icons.add_rounded, color: Colors.white),
@@ -32,7 +31,7 @@ class _AdminTeachersManagementScreenState extends State<AdminTeachersManagementS
           builder: (context, state) {
             List<Map<String, dynamic>> teachers = [];
             if (state is AdminLoaded) {
-              teachers = state.teachers; // 👈 القراءة الحية المباشرة من الفايربيز
+              teachers = state.teachers; 
             }
 
             return Stack(
@@ -82,7 +81,6 @@ class _AdminTeachersManagementScreenState extends State<AdminTeachersManagementS
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // 💎 تمرير مصفوفة بيانات المعلم الحية كـ Arguments لمنع الشاشة البيضاء والتجميد 💎
             Navigator.pushNamed(context, Routes.TeacherDetailsScreen, arguments: teacher);
           },
           child: Padding(

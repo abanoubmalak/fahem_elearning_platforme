@@ -1,8 +1,3 @@
-// lib/features/admin/data/models/teacher_model.dart
-
-// ─────────────────────────────────────────────
-//  نموذج المادة المعيّنة
-// ─────────────────────────────────────────────
 class AssignedSubject {
   final String subject;
   final String stage;
@@ -37,9 +32,7 @@ class AssignedSubject {
   );
 }
 
-// ─────────────────────────────────────────────
-//  نموذج المعلم
-// ─────────────────────────────────────────────
+
 class TeacherModel {
   final String id;
   final String name;

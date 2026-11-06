@@ -1,4 +1,3 @@
-// lib/features/parent/presentation/screens/parent_profile_screen.dart
 import 'package:fahem/core/routing/routes.dart'; 
 import 'package:fahem/features/parent/presentation/cubit/parent_cubit.dart';
 import 'package:flutter/material.dart';
@@ -68,7 +67,6 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
     super.dispose();
   }
 
-  // 💎 دالة حفظ التعديلات الذكية المحدثة لترجمة الأخطاء والتوجيه التلقائي
   void _saveProfileData() async {
     if (_nameController.text.trim().isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -100,12 +98,10 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser == null) return;
 
-      // 1. تحديث الاسم في الفايرستور
       await FirebaseFirestore.instance.collection('parents').doc(currentUser.uid).update({
         'name': _nameController.text.trim(),
       });
 
-      // 2. تحديث الباسورد في الـ Authentication لو تم إدخاله مع التقاط الأخطاء يدوياً
       if (newPass.isNotEmpty && oldPass.isNotEmpty) {
         AuthCredential credential = EmailAuthProvider.credential(email: currentUser.email!, password: oldPass);
         await currentUser.reauthenticateWithCredential(credential);
@@ -119,11 +115,9 @@ class _ParentProfileScreenState extends State<ParentProfileScreen> {
         _confirmPasswordController.clear();
         context.read<ParentCubit>().loadParentDashboard(); 
 
-        // ↩️ التوجيه المباشر الفوري للشاشة الرئيسية لولي الأمر بعد التحديث المستقر
         Navigator.pushNamedAndRemoveUntil(context, Routes.ParentWrapper, (route) => false);
       }
     } on FirebaseAuthException catch (e) {
-      // 💎 فحص وترجمة كود خطأ كلمة المرور الحالية غير الصحيحة
       String friendlyMessage = 'حدث خطأ أثناء حفظ التعديلات الرقمية.';
       if (e.code == 'wrong-password' || e.code == 'invalid-credential') {
         friendlyMessage = 'كلمة المرور الحالية التي أدخلتها غير صحيحة ❌';

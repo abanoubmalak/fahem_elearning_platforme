@@ -1,4 +1,3 @@
-// lib/features/teachers/presentation/screens/chat_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fahem/core/constants/colors.dart';
@@ -26,7 +25,6 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // دالة الإرسال المتوافقة مع هيكل database_seeder.dart
   void _sendMessage() async {
     if (_messageController.text.trim().isEmpty) return;
 
@@ -40,7 +38,7 @@ class _ChatScreenState extends State<ChatScreen> {
       'question': messageText,
       'reply': '',
       'isReplied': false,
-      'createdAt': FieldValue.serverTimestamp(), // 👈 حفظ الوقت بصيغة الفايربيز المباشرة
+      'createdAt': FieldValue.serverTimestamp(),
     });
 
     _scrollToBottom();
@@ -118,7 +116,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     .collection('teacher_questions')
                     .where('studentId', isEqualTo: currentUserId)
                     .where('teacherId', isEqualTo: widget.teacherId)
-                    .snapshots(), // 👈 جلب مباشر بدون orderBy لتجنب الحاجة لـ Composite Index
+                    .snapshots(), 
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
                     return const Center(child: CircularProgressIndicator(color: Color(0xFF005F61)));
@@ -132,7 +130,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     );
                   }
 
-                  // 👈 ترتيب الرسائل برمجياً في الذاكرة بناءً على الوقت لضمان دقة التسلسل
                   final messageDocs = snapshot.data!.docs;
                   messageDocs.sort((a, b) {
                     final aTime = (a.data() as Map<String, dynamic>)['createdAt'] as Timestamp?;
@@ -159,20 +156,19 @@ class _ChatScreenState extends State<ChatScreen> {
                       final String replyText = docData['reply'] ?? '';
                       final bool isReplied = docData['isReplied'] ?? false;
 
-                      // بما أن كل Doc هو (سؤال وإجابة)، نعرضهما كفقاعتين متتابعتين
                       return Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           if (questionText.isNotEmpty)
                             _buildMessageBubble(
                               text: questionText,
-                              isMe: true, // الطالب (صاحب السؤال)
+                              isMe: true, 
                               time: timeString,
                             ),
                           if (isReplied && replyText.isNotEmpty)
                             _buildMessageBubble(
                               text: replyText,
-                              isMe: false, // المعلم (صاحب الرد)
+                              isMe: false, 
                               time: timeString,
                             ),
                         ],
@@ -242,7 +238,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _buildMessageBubble({required String text, required bool isMe, required String time}) {
     return Align(
-      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft, // تم ضبط المحاذاة للغة العربية
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft, 
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 6),
         constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.75),

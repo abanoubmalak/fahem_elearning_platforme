@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/parents/admin_parents_management_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
@@ -93,13 +92,6 @@ class _AdminParentsManagementScreenState extends State<AdminParentsManagementScr
 
         return Scaffold(
           backgroundColor: AppColors.scaffoldBackground,
-          // floatingActionButton: FloatingActionButton.extended(
-          //   heroTag: "fab_parents_unique",
-          //   onPressed: _openAddParentBottomSheet,
-          //   backgroundColor: const Color(0xFF27AE60),
-          //   icon: const Icon(Icons.person_add_alt_1_rounded, color: Colors.white),
-          //   label: const Text('إضافة ولي أمر', style: TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold, color: Colors.white)),
-          // ),
           body: Directionality(
             textDirection: TextDirection.rtl,
             child: Stack(
@@ -121,7 +113,6 @@ class _AdminParentsManagementScreenState extends State<AdminParentsManagementScr
                               child: Material(
                                 color: Colors.transparent,
                                 child: ListTile(
-                                  // 👈 التوجيه لشاشة التفاصيل عند الضغط على الكارت
                                   onTap: () => Navigator.pushNamed(context, Routes.ParentDetailsScreen, arguments: parent),
                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                   leading: CircleAvatar(
@@ -130,7 +121,6 @@ class _AdminParentsManagementScreenState extends State<AdminParentsManagementScr
                                   ),
                                   title: Text(parent['name'] ?? 'بدون اسم', style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold)),
                                   subtitle: Text(parent['email'] ?? 'بدون بريد', style: const TextStyle(fontFamily: 'Cairo', fontSize: 11, color: Colors.grey)),
-                                  // 👈 تم استبدال أزرار التفعيل بسهم توجيه ناعم
                                   trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: Colors.grey),
                                 ),
                               ),

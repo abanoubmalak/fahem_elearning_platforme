@@ -21,7 +21,6 @@ class TeacherUnitsScreen extends StatefulWidget {
 }
 
 class _TeacherUnitsScreenState extends State<TeacherUnitsScreen> {
-  // استقبال الـ context كمعامل للدالة ليتم استخدامه في الوصول للـ Cubit
   void _openAddUnitBottomSheet(BuildContext context) {
     final TextEditingController unitController = TextEditingController();
 
@@ -66,7 +65,6 @@ class _TeacherUnitsScreenState extends State<TeacherUnitsScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     if (unitController.text.trim().isNotEmpty) {
-                      // الآن نستخدم الـ context الذي تم تمريره للدالة
                       BlocProvider.of<TeacherAcademicCubit>(context).addUnit(
                         subjectId: widget.subjectId,
                         term: widget.term,
@@ -102,7 +100,6 @@ class _TeacherUnitsScreenState extends State<TeacherUnitsScreen> {
         ..listenToSyllabus(subjectId: widget.subjectId, term: widget.term),
       child: BlocBuilder<TeacherAcademicCubit, TeacherAcademicState>(
         builder: (context, state) {
-          // هذا الـ context (من الـ builder) هو الفرعي الذي يرى الـ BlocProvider
           List<dynamic> units = [];
           if (state is AcademicLoading) {
             return const Scaffold(
@@ -116,7 +113,6 @@ class _TeacherUnitsScreenState extends State<TeacherUnitsScreen> {
           return Scaffold(
             backgroundColor: const Color(0xFFF8FAFC),
             floatingActionButton: FloatingActionButton.extended(
-              // تمرير الـ context الخاص بالـ BlocBuilder للدالة
               onPressed: () => _openAddUnitBottomSheet(context),
               backgroundColor: const Color(0xFFE6A100),
               icon: const Icon(Icons.add_rounded, color: Colors.white),

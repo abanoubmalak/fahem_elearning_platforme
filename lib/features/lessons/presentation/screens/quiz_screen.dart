@@ -1,4 +1,3 @@
-// lib/features/lessons/screens/quiz_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:fahem/core/constants/colors.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,7 +26,6 @@ class _QuizScreenState extends State<QuizScreen> {
   int? _selectedAnswerIndex;
   int _score = 0;
 
-  // 💎 التعديل المنطقي: ضمان تطابق البيانات المحفوظة مع بيانات المنهج
   void _updateLessonProgressInFirebase({
     required int studentScore, 
     required int totalQuestions, 
@@ -39,18 +37,16 @@ class _QuizScreenState extends State<QuizScreen> {
 
       double calculatedQuizScore = totalQuestions > 0 ? (studentScore / totalQuestions) : 0.0;
 
-      // الحفظ في جدول student_progress مع توحيد المعرفات
-      // ملاحظة: الـ lessonTitle هنا يجب أن يطابق تماماً الـ title في subjects_content
       await FirebaseFirestore.instance
           .collection('student_progress')
           .doc('${studentId}_${widget.subjectId}_${currentLessonTitle.replaceAll(" ", "_")}')
           .set({
         'studentId': studentId,
         'subjectId': widget.subjectId,
-        'lessonTitle': currentLessonTitle, // هذا هو المفتاح للربط مع Cubit
+        'lessonTitle': currentLessonTitle,
         'isVideoWatched': true,
         'quizScore': calculatedQuizScore * 10, 
-        'isCompleted': true, // 👈 القيمة التي يعتمد عليها الـ Cubit لإظهار علامة الإكمال
+        'isCompleted': true, 
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 

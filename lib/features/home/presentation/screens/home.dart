@@ -1,4 +1,3 @@
-// lib/features/home/screens/home_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/helpers/ui_helpers.dart';
 import 'package:fahem/features/home/presentation/cubit/student_cubit.dart';
@@ -8,7 +7,6 @@ import 'package:fahem/features/lessons/presentation/screens/subject_details_scre
 import 'package:flutter/material.dart';
 import '../widgets/subject_card.dart';
 
-// الاستدعاءات الأساسية لإدارة الحالة والـ Cubit
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,7 +22,6 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    // 👈 استدعاء دالة جلب البيانات لمرة واحدة فقط عند ولادة الشاشة لمنع الـ Infinite Loop
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<StudentCubit>().loadStudentDashboard();
@@ -42,7 +39,6 @@ class _HomeScreenState extends State<HomeScreen> {
           physics: const BouncingScrollPhysics(),
           child: Stack(
             children: [
-              // 1. Background البانر الفيروزي
               Container(
                 height: MediaQuery.of(context).size.height * 0.32, 
                 decoration: const BoxDecoration(
@@ -55,22 +51,19 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              // 2. المحتوى الأمامي مغلف بالكامل بالـ BlocBuilder لقراءة البيانات الحية 👈
               SafeArea(
                 bottom: false,
                 child: BlocBuilder<StudentCubit, StudentState>(
                   builder: (context, state) {
-                    // أ) حالة التحميل السحابي
                     if (state is StudentLoading) {
                       return SizedBox(
-                        // ملء المساحة بالكامل أسفل الترويسة الفيروزية
                         height: MediaQuery.of(context).size.height * 0.7,
                         child: const Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               CircularProgressIndicator(
-                                color: Color(0xFF005F61), // لون الهوية الفيروزي ليكون واضحاً 👈
+                                color: Color(0xFF005F61), 
                                 strokeWidth: 4,
                               ),
                               SizedBox(height: 16),
@@ -89,7 +82,6 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
 
-                    // ب) حالة حدوث خطأ في الاتصال
                     if (state is StudentError) {
                       return SizedBox(
                         height: MediaQuery.of(context).size.height * 0.6,
@@ -106,10 +98,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       );
                     }
 
-                    // ج) حالة نجاح جلب البيانات (Loaded)
                     if (state is StudentLoaded) {
                       
-                      // 💎 تحويل النسبة الحية لرقم وشريط تقدم 💎
                       final String progressPercent = (state.overallProgress * 100).toStringAsFixed(0);
                       final double progressValue = state.overallProgress > 0 ? state.overallProgress : 0.02;
 
@@ -118,18 +108,15 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           const SizedBox(height: 10),
 
-                          // الترويسة والترحيب باسم الطالب الحقيقي 👈
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 24.0),
                             child: HomeHeader(userName: state.name),
                           ),
                           const SizedBox(height: 20),
 
-                          // بنر الإعلانات
                           const BannersCarousel(),
                           const SizedBox(height: 25),
 
-                          // 3. كارت لوحة الإنجاز الإجمالية
                           Container(
                             margin: const EdgeInsets.symmetric(horizontal: 20),
                             padding: const EdgeInsets.all(20),
@@ -187,14 +174,12 @@ class _HomeScreenState extends State<HomeScreen> {
                           ),
                           const SizedBox(height: 35),
 
-                          // عنوان شبكة المواد الدراسية
                           const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 24.0),
                             child: Text('المواد الدراسية الحالية', style: TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
                           ),
                           const SizedBox(height: 16),
 
-                          // 4. شبكة المواد الدراسية المفلترة حياً حسب صف الطالب (3 أو 5 مواد) 👈
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20.0),
                             child: GridView.builder(
@@ -211,7 +196,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                 final subject = state.subjects[index];
                                 return GestureDetector(
                                   onTap: () {
-                                    // 💎 التعديل الجوهري: فحص ما إذا كانت المادة محددة في unlockedPackages
                                     if (subject.isUnlocked) {
                                       Navigator.push(context, MaterialPageRoute(
                                         builder: (context) => SubjectDetailsScreen(
@@ -221,9 +205,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         ),
                                       ));
                                     } else {
-                                      // إظهار رسالة بأن المادة غير مشترك فيها
                                       
-                                      // فتح نافذة الدفع
                                       UiHelpers.showSubscriptionPaywall(context);
                                     }
                                   },

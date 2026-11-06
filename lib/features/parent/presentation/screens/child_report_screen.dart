@@ -1,5 +1,4 @@
-// lib/features/parent/presentation/screens/child_report_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور حياً
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:flutter/material.dart';
 
 class ChildReportScreen extends StatefulWidget {
@@ -19,23 +18,16 @@ class ChildReportScreen extends StatefulWidget {
 class _ChildReportScreenState extends State<ChildReportScreen> {
   Map<String, dynamic>? _selectedChild;
   late List<Map<String, dynamic>> _subjectData;
-  bool _isLoading = true; // 👈 حارس حالة التحميل السحابي
+  bool _isLoading = true; 
 
-  // 💎 ربط قائمة المواد بالـ IDs الرسمية المعتمدة بقاعدة بيانات فاهم
-  // ⚠️ الـ id هنا لازم يطابق بالظبط الـ id المستخدم في SubjectProvider
-  // (lib/core/utils/subject_provider.dart) عشان يطابق subjectId المخزن
-  // في student_progress، وكان قبل كده 'ara' بالغلط بدل 'ar'.
   static const List<Map<String, dynamic>> _subjectsTemplate = [
     {'id': 'ar', 'subject': 'اللغة العربية', 'icon': Icons.menu_book_rounded, 'color': Color(0xFFEDF7F7)},
     {'id': 'en', 'subject': 'اللغة الإنجليزية', 'icon': Icons.g_translate_rounded, 'color': Color(0xFFFEF6E5)},
     {'id': 'math', 'subject': 'الرياضيات', 'icon': Icons.calculate_outlined, 'color': Color(0xFFF1F5F9)},
-    {'id': 'sci', 'subject': 'العلوم', 'icon': Icons.biotech_outlined, 'color': Color(0xFFEAFAF1)}, // sci متوافق مع السيرفر
+    {'id': 'sci', 'subject': 'العلوم', 'icon': Icons.biotech_outlined, 'color': Color(0xFFEAFAF1)}, 
     {'id': 'soc', 'subject': 'الدراسات الاجتماعية', 'icon': Icons.public_rounded, 'color': Color(0xFFFFEAEA)},
   ];
 
-  // 💎 نفس خريطة التحويل المستخدمة في StudentCubit و SubjectDetailsCubit
-  // عشان نطابق صيغة id المادة المخزّنة فعلياً داخل unlockedPackages في فايربيز.
-  // مثال: مادة اللغة العربية id داخلي = 'ar' لكن المخزن في فايربيز 'arabic'.
   static const Map<String, String> _firestoreSubjectIdMap = {
     'ar': 'arabic',
   };
@@ -60,7 +52,6 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
     super.initState();
     if (widget.childrenData.isNotEmpty) {
       _selectedChild = widget.initialChild ?? widget.childrenData.first;
-      // تهيئة مبدئية مأمنة بقائمة فاضية لحد ما نجيب المواد المشترك فيها فعلياً
       _subjectData = [];
       _loadLiveChildReport(_selectedChild!);
     } else {
@@ -68,12 +59,9 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
     }
   }
 
-  // 💎 دالة جلب تقارير أداء المواد التفصيلي الحقيقي للابن من الفايرستور
-  // 👈 تعرض فقط المواد المشترك فيها الطالب فعلياً (unlockedPackages) بدل كل المواد
   Future<void> _loadLiveChildReport(Map<String, dynamic> child) async {
     setState(() => _isLoading = true);
     try {
-      // 1. جلب بيانات الطالب نفسه عشان نعرف صفه وترمه ومواده المشترك فيها
       final String studentId = child['id'];
       final DocumentSnapshot studentDoc = await FirebaseFirestore.instance
           .collection('students')
@@ -94,14 +82,12 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
       final String stageCode = _stageCode(studentGrade);
       final String termCode = _termCode(studentTerm);
 
-      // 2. فلترة المواد: نعرض فقط المادة اللي packageId بتاعها موجود في unlockedPackages
       final List<Map<String, dynamic>> unlockedSubjects = _subjectsTemplate.where((subject) {
         final String firestoreId = _firestoreSubjectId(subject['id'] as String);
         final String packageId = '${firestoreId}_${stageCode}_${termCode}';
         return unlockedPackages.contains(packageId);
       }).toList();
 
-      // لو الطالب مش مشترك في أي مادة، منعرضش حاجة بدل ما نعرض كل المواد بصفر
       if (unlockedSubjects.isEmpty) {
         if (mounted) {
           setState(() {
@@ -112,20 +98,17 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
         return;
       }
 
-      // 3. جلب سجلات تقدم الطالب بالكامل المربوطة بمعرفه
       final QuerySnapshot progressSnap = await FirebaseFirestore.instance
           .collection('student_progress')
           .where('studentId', isEqualTo: studentId)
           .get();
 
-      // 4. احتساب النسب الحركية فقط للمواد المشترك فيها فعلياً
       final List<Map<String, dynamic>> updatedData = unlockedSubjects.map((subject) {
         final subjectDocs = progressSnap.docs.where((doc) {
           final pData = doc.data() as Map<String, dynamic>;
           return pData['subjectId'] == subject['id'];
         }).toList();
 
-        // إذا لم يبدأ الطالب المادة بعد، تظهر بنسبة 0%
         if (subjectDocs.isEmpty) {
           return {
             ...subject,
@@ -148,7 +131,7 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
         return {
           ...subject,
           'watchProgress': watchCount / subjectDocs.length,
-          'quizScore': (quizSum / subjectDocs.length) / 10.0, // القسمة على 10 لتصبح نسبة بين 0.0 و 1.0 للـ Progress Bar
+          'quizScore': (quizSum / subjectDocs.length) / 10.0, 
         };
       }).toList();
 
@@ -169,7 +152,7 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
     setState(() {
       _selectedChild = child;
     });
-    _loadLiveChildReport(child); // إعادة جلب التقارير حياً فور تبديل الابن
+    _loadLiveChildReport(child); 
   }
 
   double _calculateSubjectScore(double watch, double quiz) => (watch * 0.4) + (quiz * 0.6);
@@ -217,7 +200,6 @@ class _ChildReportScreenState extends State<ChildReportScreen> {
           children: [
             _buildHeader(overallScore),
             Expanded(
-              // 💎 دمج مؤشر التحميل بسلاسة لضمان جودة الأداء البصري وثبات التصميم 💎
               child: _isLoading 
                   ? const Center(child: CircularProgressIndicator(color: Color(0xFF005F61), strokeWidth: 4))
                   : _subjectData.isEmpty

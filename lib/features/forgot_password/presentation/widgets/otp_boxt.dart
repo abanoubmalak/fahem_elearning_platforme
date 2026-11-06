@@ -27,7 +27,6 @@ class OtpBix extends StatelessWidget{
             FocusScope.of(context).nextFocus();
             }
             if (value.isEmpty) {
-            // لو مسح الرقم، ارجع للمربع اللي قبله تلقائياً
             FocusScope.of(context).previousFocus();
           }
         },
@@ -37,7 +36,6 @@ class OtpBix extends StatelessWidget{
           filled: true,
           fillColor: Colors.white,
 
-          //contentPadding: const EdgeInsets.symmetric(horizontal: 20,vertical: 15),
           
           enabledBorder: OutlineInputBorder(
             borderRadius:  BorderRadius.circular(10.0),

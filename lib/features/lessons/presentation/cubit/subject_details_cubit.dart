@@ -1,4 +1,3 @@
-// lib/features/lessons/presentation/cubit/subject_details_cubit.dart
 import 'dart:async'; 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -20,10 +19,6 @@ class SubjectDetailsError extends SubjectDetailsState {
 class SubjectDetailsCubit extends Cubit<SubjectDetailsState> {
   SubjectDetailsCubit() : super(SubjectDetailsInitial());
 
-  // 💎 نفس خريطة التحويل الموجودة في StudentCubit، لازم تتطابق بالظبط
-  // عشان الـ docId اللي بيتجاب بيه المحتوى من subjects_content يطابق
-  // نفس الـ packageId المستخدم في unlockedPackages.
-  // مثال: مادة اللغة العربية id داخلي = 'ar' لكن المخزن في فايربيز 'arabic'.
   static const Map<String, String> _firestoreSubjectIdMap = {
     'ar': 'arabic',
   };
@@ -32,7 +27,6 @@ class SubjectDetailsCubit extends Cubit<SubjectDetailsState> {
     return _firestoreSubjectIdMap[localId] ?? localId;
   }
 
-  // 💎 توليد كود الصف الدراسي (g1/g2/g3) من اسم الصف الحقيقي بدل التثبيت اليدوي
   String _stageCodeFromGrade(String? grade) {
     if (grade == null) return 'g1';
     if (grade.contains('الثاني الإعدادي')) return 'g2';
@@ -43,7 +37,7 @@ class SubjectDetailsCubit extends Cubit<SubjectDetailsState> {
   void fetchSyllabus({
     required String subjectId,
     required String term,
-    String? studentGrade, // 👈 صف الطالب الحقيقي، اختياري للحفاظ على التوافق مع الاستدعاءات القديمة
+    String? studentGrade, 
   }) async {
     emit(SubjectDetailsLoading());
 
@@ -51,16 +45,14 @@ class SubjectDetailsCubit extends Cubit<SubjectDetailsState> {
       final String studentId = FirebaseAuth.instance.currentUser?.uid ?? '';
       final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
-      // 💎 التعديل المنطقي: توليد docId مطابق تماماً لما هو مستخدم في unlockedPackages
       String stageCode = _stageCodeFromGrade(studentGrade);
       String termCode = term == 'الترم الثاني' ? 't2' : 't1';
       String firestoreSubjectId = _firestoreSubjectId(subjectId);
       String docId = '${firestoreSubjectId}_${stageCode}_$termCode';
 
-      // 1. جلب محتوى المنهج الأساسي
       DocumentSnapshot contentDoc = await firestore
           .collection('subjects_content')
-          .doc(docId) // استخدام المعرف المصحح
+          .doc(docId) 
           .get();
 
       if (!contentDoc.exists) {
@@ -71,7 +63,6 @@ class SubjectDetailsCubit extends Cubit<SubjectDetailsState> {
       final data = contentDoc.data() as Map<String, dynamic>;
       List<dynamic> units = List.from(data['units'] ?? []);
 
-      // 2. جلب تقدم الطالب الحالي (الاستعلام يتم بالـ id المحلي كما هو محفوظ من شاشات الدرس/الاختبار)
       QuerySnapshot progressSnap = await firestore
           .collection('student_progress')
           .where('studentId', isEqualTo: studentId)
@@ -86,7 +77,6 @@ class SubjectDetailsCubit extends Cubit<SubjectDetailsState> {
         }
       }
 
-      // 3. دمج البيانات
       for (var unit in units) {
         List<dynamic> lessons = List.from(unit['lessons'] ?? []);
         for (var lesson in lessons) {

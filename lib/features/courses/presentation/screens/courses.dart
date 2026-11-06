@@ -1,11 +1,9 @@
-// lib/features/lessons/screens/courses_screen.dart
 import 'package:fahem/core/constants/colors.dart';
-import 'package:fahem/core/helpers/ui_helpers.dart'; // 👈 استدعاء نافذة حماية المحتوى
-import 'package:fahem/core/routing/routes.dart';
-import 'package:fahem/features/home/presentation/cubit/student_cubit.dart'; // 👈 استدعاء عقل الطالب
+import 'package:fahem/core/helpers/ui_helpers.dart'; 
+import 'package:fahem/features/home/presentation/cubit/student_cubit.dart'; 
 import 'package:fahem/features/lessons/presentation/screens/subject_details_screen.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart'; // 👈 استدعاء البلوك
+import 'package:flutter_bloc/flutter_bloc.dart'; 
 import '../widgets/course_list_item.dart';
 
 class Courses extends StatefulWidget {
@@ -16,13 +14,11 @@ class Courses extends StatefulWidget {
 }
 
 class _MyCoursesScreenState extends State<Courses> {
-  // تفعيل الزر رقم 2 في شريط التنقل السفلي (أيقونة دوراتي)
   final int _currentIndex = 2; 
 
   @override
   void initState() {
     super.initState();
-    // 👈 التعديل التأسيسي: جلب البيانات بصفة استباقية حية فور ولادة الواجهة
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         context.read<StudentCubit>().loadStudentDashboard();
@@ -36,7 +32,6 @@ class _MyCoursesScreenState extends State<Courses> {
       textDirection: TextDirection.rtl, 
       child: Scaffold(
         backgroundColor: AppColors.scaffoldBackground,
-        // ==================== 1. الترويسة العلوية ====================
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -84,10 +79,8 @@ class _MyCoursesScreenState extends State<Courses> {
           ),
         ),
 
-        // ==================== 2. قائمة الكورسات المربوطة سحابياً ====================
         body: BlocBuilder<StudentCubit, StudentState>(
           builder: (context, state) {
-            // أ) حالة التحميل المتناسقة (تم دمج الـ StudentInitial لمنع الوميض الأبيض نهائياً) 👈
             if (state is StudentLoading || state is StudentInitial) {
               return SizedBox(
                 height: MediaQuery.of(context).size.height * 0.7,
@@ -115,7 +108,6 @@ class _MyCoursesScreenState extends State<Courses> {
               );
             }
 
-            // ب) حالة الخطأ
             if (state is StudentError) {
               return Center(
                 child: Text(
@@ -125,7 +117,6 @@ class _MyCoursesScreenState extends State<Courses> {
               );
             }
 
-            // ج) حالة الاستقرار وعرض المواد المفلترة حياً
             if (state is StudentLoaded) {
               return SingleChildScrollView(
                 physics: const BouncingScrollPhysics(), 
@@ -133,17 +124,15 @@ class _MyCoursesScreenState extends State<Courses> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // رسم قائمة المواد حياً بناءً على مصفوفة الـ Cubit المفلترة 👈
                     ListView.builder(
                       shrinkWrap: true, 
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: state.subjects.length, // عدد المواد المخصصة لصف الطالب
+                      itemCount: state.subjects.length, 
                       itemBuilder: (context, index) {
                         final subject = state.subjects[index];
                         
                         return GestureDetector(
                           onTap: () {
-                            // 💎 الفحص المنطقي المحدث لكل مادة بشكل مستقل حياً 💎
                             if (subject.isUnlocked) {
                               Navigator.push(
                                 context,
@@ -156,11 +145,9 @@ class _MyCoursesScreenState extends State<Courses> {
                                 ),
                               );
                             } else {
-                              // 🔒 إذا كانت المادة مقفولة وغير موجودة مع الطالب، تظهر نافذة الحظر المنبثقة مباشرة
                               UiHelpers.showSubscriptionPaywall(context);
                             }
                           },
-                          // شكل الكارت ثابت بدون أي أيقونات أو إضافات في التصميم
                           child: CourseListItem(
                             title: subject.title,
                             progress: subject.progress,
@@ -170,7 +157,6 @@ class _MyCoursesScreenState extends State<Courses> {
                       },
                     ),
                     
-                    // مسافة أمان سفلية 
                     const SizedBox(height: 100),
                   ],
                 ),

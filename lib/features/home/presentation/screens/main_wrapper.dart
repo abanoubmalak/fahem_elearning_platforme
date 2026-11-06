@@ -1,11 +1,9 @@
-// lib/features/home/presentation/screens/main_wrapper.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/courses/presentation/screens/courses.dart';
 import 'package:fahem/features/home/presentation/screens/home.dart';
 import 'package:fahem/features/performance/presentation/screens/performance_screen.dart';
 import 'package:fahem/features/teachers/presentation/screens/contact_teachers_screen.dart';
 import 'package:flutter/material.dart';
-// قم بعمل import للشاشات الأربعة الخاصة بك هنا
 
 
 class MainWrapper extends StatefulWidget {
@@ -16,32 +14,23 @@ class MainWrapper extends StatefulWidget {
 }
 
 class _MainWrapperState extends State<MainWrapper> {
-  int _currentIndex = 3; // نبدأ من 3 لتكون "الرئيسية" هي الشاشة الافتراضية عند الفتح (أقصى اليمين)
+  int _currentIndex = 3; 
 
-  // قائمة الشاشات المرتبطة بأزرار التنقل (يجب أن تطابق ترتيب الأزرار بالأسفل)
   final List<Widget> _screens = const [
-   // PerformanceScreen(), // 0. الأداء
-    //TeachersScreen(),    // 1. تواصل مع مدرسك
-    //MyCoursesScreen(), 
-    //]
     PerformanceScreen(),  
     ContactTeachersScreen(),
     Courses(),
     HomeScreen(),  
-             // 3. الرئيسية
-         // 3. الرئيسية
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // IndexedStack يحفظ حالة كل شاشة (State) فلا تعيد التحميل من الصفر عند التنقل بين التبويبات
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
       
-      // هنا نضع كود لوحة التنقل المحدث والمريح بصرياً الذي استقررنا عليه
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,

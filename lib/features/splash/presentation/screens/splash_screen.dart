@@ -1,4 +1,3 @@
-// lib/features/splash/presentation/screens/splash_screen.dart
 import 'dart:async';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
@@ -58,7 +57,6 @@ class _SplashScreen extends State<SplashScreen>
             .get();
 
         if (!doc.exists || doc.data() == null) {
-          // مستند غير موجود — يروح للوجين
           Navigator.pushReplacementNamed(context, Routes.loginScreen);
           return;
         }
@@ -67,7 +65,6 @@ class _SplashScreen extends State<SplashScreen>
         final bool isActive =
             (data['is_active'] == true) || (data['isActive'] == true);
 
-        // ✅ إذا الحساب مش مفعّل — يرجع لشاشة OTP مش الرئيسية
         if (!isActive) {
           Navigator.pushReplacementNamed(
             context,

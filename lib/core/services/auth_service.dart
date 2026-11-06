@@ -1,4 +1,3 @@
-// lib/core/services/auth_service.dart
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:async';
@@ -7,20 +6,17 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // ✅ التحقق من صلاحية الإيميل قبل أي عملية
   bool _isValidEmail(String email) {
     final emailRegex = RegExp(r'^[\w\.-]+@[\w\.-]+\.\w{2,}$');
     return emailRegex.hasMatch(email.trim());
   }
 
-  // دالة إنشاء حساب جديد
   Future<User?> signUpUser({
     required String name,
     required String email,
     required String password,
     required String role,
   }) async {
-    // ✅ رفض الإيميلات الوهمية قبل أي طلب لـ Firebase
     if (!_isValidEmail(email)) {
       throw FirebaseAuthException(
         code: 'invalid-email',
@@ -30,7 +26,6 @@ class AuthService {
 
     UserCredential? credential;
     try {
-      // 1. إنشاء الحساب في Firebase Auth
       credential = await _auth.createUserWithEmailAndPassword(
         email: email.trim().toLowerCase(),
         password: password.trim(),
@@ -38,7 +33,6 @@ class AuthService {
 
       if (credential.user == null) return null;
 
-      // 2. بناء مستند البيانات
       final Map<String, dynamic> userData = {
         'uid': credential.user!.uid,
         'name': name.trim(),
@@ -54,7 +48,6 @@ class AuthService {
         userData['linked_children'] = [];
       }
 
-      // 3. حفظ في Firestore
       await _firestore
           .collection('users')
           .doc(credential.user!.uid)
@@ -65,18 +58,15 @@ class AuthService {
     } on FirebaseAuthException {
       rethrow;
     } catch (e) {
-      // ✅ لو فشل حفظ Firestore — نمسح حساب Firebase عشان مايفضلش معلّق
       if (credential?.user != null) {
         try {
           await credential!.user!.delete();
         } catch (_) {}
       }
-      print('=== [AuthService 🚨] استثناء غير متوقع: $e ===');
       rethrow;
     }
   }
 
-  // تسجيل الدخول
   Future<String?> loginUser({
     required String email,
     required String password,
@@ -103,7 +93,6 @@ class AuthService {
     }
   }
 
-  // فحص وجود الإيميل في قاعدة البيانات
   Future<bool> isEmailRegistered(String email) async {
     final String cleanEmail = email.trim().toLowerCase();
     final query = await _firestore
@@ -114,7 +103,6 @@ class AuthService {
     return query.docs.isNotEmpty;
   }
 
-  // التحقق من كود OTP
   Future<bool> verifyUserOTP(String uid, String enteredCode) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
@@ -126,7 +114,6 @@ class AuthService {
 
       if (savedOtp == null || savedOtp != enteredCode.trim()) return false;
 
-      // تفعيل الحساب ومسح الكود
       await _firestore.collection('users').doc(uid).update({
         'is_active': true,
         'isActive': true,
@@ -136,12 +123,10 @@ class AuthService {
 
       return true;
     } catch (e) {
-      print('verifyUserOTP Error: $e');
       return false;
     }
   }
 
-  // تحديث كلمة المرور في Firestore
   Future<void> updatePasswordInFirestore(
     String email,
     String newPassword,

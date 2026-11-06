@@ -1,4 +1,3 @@
-// lib/features/forgot_password/presentation/screens/forgot_password_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/helpers/app_validator.dart';
 import 'package:fahem/core/routing/routes.dart';
@@ -27,23 +26,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl, // لضمان اتجاه الشاشة باللغة العربية
+      textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
           child: BlocConsumer<AuthCubit, AuthState>(
             listener: (context, state) {
-              // حالة الفشل
               if (state is AuthFailure) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(state.error, style: const TextStyle(fontFamily: 'Cairo')),
+                    content: Text(
+                      state.error,
+                      style: const TextStyle(fontFamily: 'Cairo'),
+                    ),
                     backgroundColor: Colors.redAccent,
                   ),
                 );
-              }
-              // حالة النجاح
-              else if (state is AuthResetPasswordSuccess) {
+              } else if (state is AuthResetPasswordSuccess) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text(
@@ -54,32 +53,43 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     duration: Duration(seconds: 5),
                   ),
                 );
-                // إرجاع المستخدم لشاشة تسجيل الدخول بعد النجاح
-                Navigator.pushNamedAndRemoveUntil(context, Routes.loginScreen, (route) => false);
+                Navigator.pushNamedAndRemoveUntil(
+                  context,
+                  Routes.loginScreen,
+                  (route) => false,
+                );
               }
             },
             builder: (context, state) {
               return SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 25, vertical: 20),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 25,
+                  vertical: 20,
+                ),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     children: [
-                      // ── زر الرجوع ──
                       Align(
                         alignment: Alignment.centerRight,
                         child: IconButton(
                           onPressed: () => Navigator.pop(context),
-                          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primaryTeal),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: AppColors.primaryTeal,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 5),
 
-                      // ── اللوجو ──
                       Center(
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(1),
-                          child: Image.asset("assets/images/logo.png", width: 130, height: 130),
+                          child: Image.asset(
+                            "assets/images/logo.png",
+                            width: 130,
+                            height: 130,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 20),
@@ -109,13 +119,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       const SizedBox(height: 35),
 
-                      // ── حقل البريد الإلكتروني ──
                       TextFormField(
                         controller: _emailController,
                         validator: AppValidator.validateEmail,
                         keyboardType: TextInputType.emailAddress,
                         textAlign: TextAlign.right,
-                        style: const TextStyle(fontFamily: 'Cairo', fontWeight: FontWeight.bold),
+                        style: const TextStyle(
+                          fontFamily: 'Cairo',
+                          fontWeight: FontWeight.bold,
+                        ),
                         decoration: InputDecoration(
                           hintText: 'البريد الإلكتروني',
                           hintStyle: const TextStyle(
@@ -126,44 +138,68 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                           prefixIcon: const Padding(
                             padding: EdgeInsets.symmetric(horizontal: 12),
-                            child: Icon(Icons.email_rounded, size: 30, color: AppColors.primaryTeal),
+                            child: Icon(
+                              Icons.email_rounded,
+                              size: 30,
+                              color: AppColors.primaryTeal,
+                            ),
                           ),
                           filled: true,
                           fillColor: Colors.white,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 15,
+                          ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30.0),
-                            borderSide: const BorderSide(color: AppColors.primaryTeal, width: 2),
+                            borderSide: const BorderSide(
+                              color: AppColors.primaryTeal,
+                              width: 2,
+                            ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30.0),
-                            borderSide: const BorderSide(color: AppColors.primaryTeal, width: 3),
+                            borderSide: const BorderSide(
+                              color: AppColors.primaryTeal,
+                              width: 3,
+                            ),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30.0),
-                            borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                            borderSide: const BorderSide(
+                              color: Colors.redAccent,
+                              width: 2,
+                            ),
                           ),
                           focusedErrorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(30.0),
-                            borderSide: const BorderSide(color: Colors.redAccent, width: 2),
+                            borderSide: const BorderSide(
+                              color: Colors.redAccent,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 40),
 
-                      // ── زر إرسال الرابط ──
                       ElevatedButton(
                         onPressed: state is AuthLoading
                             ? null
                             : () {
                                 if (_formKey.currentState!.validate()) {
-                                  context.read<AuthCubit>().sendPasswordResetLink(_emailController.text.trim());
+                                  context
+                                      .read<AuthCubit>()
+                                      .sendPasswordResetLink(
+                                        _emailController.text.trim(),
+                                      );
                                 }
                               },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryTeal,
                           minimumSize: const Size(double.infinity, 65),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30.0)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30.0),
+                          ),
                           elevation: 0,
                           disabledBackgroundColor: Colors.grey[300],
                         ),
@@ -171,15 +207,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ? const SizedBox(
                                 height: 26,
                                 width: 26,
-                                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 3),
+                                child: CircularProgressIndicator(
+                                  color: Colors.white,
+                                  strokeWidth: 3,
+                                ),
                               )
                             : const Text(
                                 'إرسال رابط الاستعادة',
-                                style: TextStyle(fontFamily: 'Cairo', color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontFamily: 'Cairo',
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                       ),
                       const SizedBox(height: 20),
-
                     ],
                   ),
                 ),

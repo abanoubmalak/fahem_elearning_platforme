@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/parents/edit_parent_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -78,7 +77,6 @@ class _EditParentScreenState extends State<EditParentScreen> {
                       _buildTextField(label: 'اسم ولي الأمر', controller: _nameController, icon: Icons.person_rounded),
                       const SizedBox(height: 16),
                       _buildTextField(label: 'البريد الإلكتروني', controller: _emailController, icon: Icons.email_rounded, keyboardType: TextInputType.emailAddress),
-                      // 👈 تم إزالة حقل التعديل الخاص برقم الموبايل
                       const SizedBox(height: 40),
                       SizedBox(
                         width: double.infinity, height: 52,

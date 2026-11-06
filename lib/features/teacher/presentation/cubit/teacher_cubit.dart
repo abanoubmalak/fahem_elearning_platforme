@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/cubit/teacher_cubit.dart
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -39,7 +38,6 @@ class TeacherCubit extends Cubit<TeacherState> {
   List<Map<String, dynamic>> _questionsCache = [];
   List<Map<String, dynamic>> _transactionsCache = [];
 
-  // 💎 جلب الـ UID الحقيقي للمعلم الحالي من الـ Auth مباشرة
   String get _currentTeacherId => _auth.currentUser?.uid ?? '';
 
   void fetchTeacherDashboard() {
@@ -55,14 +53,12 @@ class TeacherCubit extends Cubit<TeacherState> {
     _transactionsSubscription?.cancel();
 
     try {
-      // 1️⃣ المسار الأول: الاستماع اللحظي للملف الشخصي للمعلم ومحفظته المالية
       _profileSubscription = _firestore
           .collection('teachers')
           .doc(_currentTeacherId)
           .snapshots()
           .listen((profileDoc) {
             
-        // 💎 تتبع حالة البيانات حياً في الكونسول لاكتشاف أخطاء الـ UID
         debugPrint('--- [Debug] Firestore Path: teachers/$_currentTeacherId ---');
         debugPrint('--- [Debug] Data Exists: ${profileDoc.exists} ---');
 
@@ -74,7 +70,6 @@ class TeacherCubit extends Cubit<TeacherState> {
         try {
           final data = profileDoc.data()!;
           
-          // 💎 المعالجة الآمنة للبيانات لمنع أعطال (Null/Type Mismatch)
           _profileCache = {
             'name': data['name'] ?? 'معلم غير محدد',
             'specialty': data['specialty'] ?? 'غير محدد',
@@ -82,7 +77,7 @@ class TeacherCubit extends Cubit<TeacherState> {
             'pendingBalance': (data['pendingBalance'] ?? 0).toDouble(),
             'totalStudents': (data['totalStudents'] ?? 0).toInt(),
             'averageScore': (data['averageScore'] ?? 0.0).toDouble(),
-            'excellentCount': data['excellentCount'], // قد تكون null وسيعالجها الـ UI
+            'excellentCount': data['excellentCount'], 
             'goodCount': data['goodCount'],
             'weakCount': data['weakCount'],
             'assignedCourses': data['assignedCourses'] ?? [],
@@ -97,7 +92,6 @@ class TeacherCubit extends Cubit<TeacherState> {
         emit(TeacherError(message: 'حدث خطأ أثناء مزامنة الملف الشخصي: $error'));
       });
 
-      // 2️⃣ المسار الثاني: الاستماع اللحظي لأسئلة الطلاب الموجهة لهذا المعلم
       _questionsSubscription = _firestore
           .collection('teacher_questions')
           .where('teacherId', isEqualTo: _currentTeacherId)
@@ -113,7 +107,6 @@ class TeacherCubit extends Cubit<TeacherState> {
         emit(TeacherError(message: 'حدث خطأ أثناء مزامنة أسئلة الطلاب: $error'));
       });
 
-      // 3️⃣ المسار الثالث: الاستماع اللحظي للمعاملات المالية
       _transactionsSubscription = _firestore
           .collection('transactions') 
           .where('teacherId', isEqualTo: _currentTeacherId)
@@ -205,25 +198,21 @@ class TeacherCubit extends Cubit<TeacherState> {
   final DocumentReference teacherRef = firestore.collection('teachers').doc(teacherId);
 
   await firestore.runTransaction((transaction) async {
-    // 1. قراءة البيانات الحالية للمدرس
     DocumentSnapshot teacherSnapshot = await transaction.get(teacherRef);
     
     if (!teacherSnapshot.exists) return;
 
     Map<String, dynamic> data = teacherSnapshot.data() as Map<String, dynamic>;
     
-    // 2. استخراج القيم الحالية (مع وضع قيم افتراضية 0 إذا كانت فارغة)
     int totalStudents = (data['totalStudents'] ?? 0);
     double currentAverage = (data['averageScore'] ?? 0.0).toDouble();
     int excellentCount = (data['excellentCount'] ?? 0);
     int goodCount = (data['goodCount'] ?? 0);
     int weakCount = (data['weakCount'] ?? 0);
 
-    // 3. الحسابات الجديدة
     int newTotalStudents = totalStudents + 1;
     double newAverage = ((currentAverage * totalStudents) + newScore) / newTotalStudents;
     
-    // تصنيف الطالب (افترضنا الدرجة من 10)
     int newExcellent = excellentCount;
     int newGood = goodCount;
     int newWeak = weakCount;
@@ -236,7 +225,6 @@ class TeacherCubit extends Cubit<TeacherState> {
       newWeak++;
     }
 
-    // 4. كتابة القيم المحدثة
     transaction.update(teacherRef, {
       'totalStudents': newTotalStudents,
       'averageScore': newAverage,
@@ -253,7 +241,6 @@ Future<void> addUnit({
   required String unitName,
 }) async {
   try {
-    // 1. البحث عن المستند الخاص بالمادة والترم
     final querySnapshot = await FirebaseFirestore.instance
         .collection('subjects_content')
         .where('subjectId', isEqualTo: subjectId)
@@ -263,15 +250,13 @@ Future<void> addUnit({
     if (querySnapshot.docs.isNotEmpty) {
       final docId = querySnapshot.docs.first.id;
 
-      // 2. تجهيز هيكل الوحدة الجديدة (مطابق لهيكلة الداتابيز الحالية)
       final Map<String, dynamic> newUnit = {
         'title': unitName,
-        'lessons': [], // قائمة دروس فارغة
-        'quiz': [],    // قائمة اختبارات فارغة
-        'summaries': [], // قائمة ملخصات فارغة
+        'lessons': [],
+        'quiz': [],    
+        'summaries': [], 
       };
 
-      // 3. إضافة الوحدة باستخدام arrayUnion لتجنب الكتابة فوق البيانات
       await FirebaseFirestore.instance
           .collection('subjects_content')
           .doc(docId)
@@ -279,14 +264,11 @@ Future<void> addUnit({
         'units': FieldValue.arrayUnion([newUnit]),
       });
       
-      // لا حاجة لعمل emit للحالة هنا إذا كنت تستخدم StreamBuilder أو listenToSyllabus، 
-      // لأن الفايربيز سيقوم بتحديث الـ Stream تلقائياً والشاشة ستتحدث.
     } else {
       debugPrint("خطأ: لم يتم العثور على مستند المادة لهذا الترم");
     }
   } catch (e) {
     debugPrint("حدث خطأ أثناء إضافة الوحدة: $e");
-    // يمكنك إضافة emit(AcademicError(message: e.toString())); إذا لزم الأمر
   }
 }
 

@@ -1,4 +1,3 @@
-// lib/features/auth/presentation/screens/role_selection_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:fahem/features/auth/presentation/cubit/auth_cubit.dart';
@@ -14,14 +13,11 @@ class RoleSelectionScreen extends StatefulWidget {
 }
 
 class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
-  // متغير تحديد الدور المختار (student أو parent)
   String? _selectedRole;
 
-  // متغيرات الخطة الدراسية المبدئية في حالة اختيار "طالب"
   String _selectedStage = 'الصف الأول الإعدادي';
   String _selectedSemester = 'الترم الثاني';
 
-  // قائمة الـ 9 صفوف المعتمدة في التطبيق من أولى ابتدائي لثالثة إعدادي
   final List<String> _stages = [
     'الصف الأول الابتدائي',
     'الصف الثاني الابتدائي',
@@ -48,7 +44,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
         child: BlocConsumer<AuthCubit, AuthState>(
           listener: (context, state) {
             if (state is AuthOTPSent) {
-              // تمرير بيانات الـ UID والبريد لشاشة تأكيد الـ OTP
               Navigator.pushNamed(
                 context,
                 Routes.OtpVerificationScreen,
@@ -68,7 +63,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
 
             return Stack(
               children: [
-                // ==================== 1. البانر الفيروزي العلوي ====================
                 Positioned(
                   top: 0,
                   left: 0,
@@ -86,10 +80,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         bottomRight: Radius.circular(32),
                       ),
                     ),
-                    // bottom: false ضرورية هنا، لأن هذا الكونتينر له ارتفاع ثابت (headerHeight)
-                    // وهو مثبّت في أعلى الشاشة. بدونها، SafeArea تضيف ارتفاع "مؤشر الهوم"
-                    // الموجود أسفل الشاشة كـ padding سفلي داخل هذا الكونتينر الثابت الارتفاع،
-                    // فيدفع النص لتحت ويتسبب في overflow بسيط على بعض الأجهزة (آيفون بدون زر هوم مثلاً).
                     child: const SafeArea(
                       bottom: false,
                       child: Padding(
@@ -113,12 +103,9 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                   ),
                 ),
 
-                // ==================== 2. محتوى استكمال البيانات التفاعلي ====================
                 Positioned.fill(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
-                    // أضفنا bottomSafeInset عشان زر التأكيد ما يلصقش في شريط الجستشر/الهوم
-                    // إندكتور بتاع الأجهزة اللي من غير زر هوم.
                     padding: EdgeInsets.fromLTRB(20, headerHeight + 25, 20, 30 + bottomSafeInset),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -132,7 +119,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                         ),
                         const SizedBox(height: 15),
 
-                        // ==================== خيارات تحديد الدور أفقياً ====================
                         Row(
                           children: [
                             Expanded(
@@ -155,7 +141,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                           ],
                         ),
 
-                        // ==================== 3. ظهور حقول المرحلة والترم ديناميكياً ====================
                         AnimatedSize(
                           duration: const Duration(milliseconds: 250),
                           curve: Curves.easeInOut,
@@ -200,12 +185,11 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
                                     ),
                                   ],
                                 )
-                              : const SizedBox.shrink(), // إخفاء الحقول تماماً في حالة عدم اختيار طالب
+                              : const SizedBox.shrink(), 
                         ),
 
                         const SizedBox(height: 40),
 
-                        // ==================== 4. زر التأكيد النهائي ====================
                         SizedBox(
                           width: double.infinity,
                           height: 52,
@@ -257,7 +241,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
   }
 
-  // باني كروت الأدوار التفاعلية
   Widget _buildRoleCard({
     required String roleValue,
     required String title,
@@ -307,7 +290,6 @@ class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
     );
   }
 
-  // باني الحقول المنسدلة (Dropdown)
   Widget _buildDropdownField({
     required String label,
     required String value,

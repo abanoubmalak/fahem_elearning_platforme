@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/screens/tabs/teacher_subjects_tab.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/teacher/presentation/screens/manage_sections/teacher_units_screen.dart';
 import 'package:fahem/features/teacher/presentation/screens/teacher_profile_screen.dart'; 
@@ -50,7 +49,6 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                             itemBuilder: (context, index) {
                               final course = assignedCourses[index] as Map<String, dynamic>;
                               
-                              // 💎 قراءة قيم المادة والترم حركياً وسحابياً من الداتابيز لمنع الـ Hardcoding
                               final String currentSubjectId = course['subject'] ?? 'sci';
                               final String currentTerm = course['term'] ?? 'الترم الثاني';
 
@@ -62,7 +60,6 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(22),
                                     onTap: () {
-                                      // 💎 التوجيه المباشر المستقر هندسياً وتغذية شاشة الوحدات حياً 💎
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
@@ -87,15 +84,6 @@ class _TeacherSubjectsTabState extends State<TeacherSubjectsTab> {
                                               const Icon(Icons.arrow_forward_ios_rounded, color: Colors.grey, size: 16),
                                             ],
                                           ),
-                                          // const Padding(padding: EdgeInsets.symmetric(vertical: 14.0), child: Divider(color: Color(0xFFF1F5F9), thickness: 1)),
-                                          // Row(
-                                          //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                          //   children: [
-                                          //     _buildMiniStat(Icons.play_circle_fill_rounded, '${course['videos'] ?? 0} فيديو'),
-                                          //     _buildMiniStat(Icons.article_rounded, '${course['pdfs'] ?? 0} ملخص'), // 👈 أيقونة منسقة مع العناصر الثلاثة المحددة بدقة
-                                          //     _buildMiniStat(Icons.assignment_rounded, '${course['quizzes'] ?? 0} اختبار', color: const Color(0xFFE6A100)),
-                                          //   ],
-                                          // ),
                                         ],
                                       ),
                                     ),

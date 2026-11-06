@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/cubit/admin_cubit.dart
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -10,7 +9,7 @@ class AdminLoading extends AdminState {}
 class AdminLoaded extends AdminState {
   final List<Map<String, dynamic>> teachers;
   final List<Map<String, dynamic>> students;
-  final List<Map<String, dynamic>> parents; // 👈 إضافة أولياء الأمور
+  final List<Map<String, dynamic>> parents; 
   final List<Map<String, dynamic>> payoutRequests;
   final Map<String, dynamic> financials;
 
@@ -56,14 +55,12 @@ StreamSubscription? _teachersSub;
         _studentsSub = FirebaseFirestore.instance.collection('students').snapshots().listen((studentsSnap) {
           final students = studentsSnap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
 
-          // 👈 الاستماع الحي لبيانات أولياء الأمور
           _parentsSub = FirebaseFirestore.instance.collection('parents').snapshots().listen((parentsSnap) {
             final parents = parentsSnap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
 
             _payoutsSub = FirebaseFirestore.instance.collection('withdrawal_requests').where('status', isEqualTo: 'pending').snapshots().listen((payoutsSnap) {
               final payouts = payoutsSnap.docs.map((doc) => {'id': doc.id, ...doc.data()}).toList();
 
-              // 👈 الاستماع الحي لكل المعاملات المالية لحساب صافي أرباح المنصة الحقيقي
               _transactionsSub = FirebaseFirestore.instance.collection('transactions').snapshots().listen((transactionsSnap) {
                 double totalPlatformEarnings = 0.0;
                 for (var doc in transactionsSnap.docs) {
@@ -123,7 +120,6 @@ StreamSubscription? _teachersSub;
     try {
       final batch = FirebaseFirestore.instance.batch();
       batch.update(FirebaseFirestore.instance.collection('withdrawal_requests').doc(requestId), {'status': 'rejected'});
-      // إرجاع المبلغ من "معلّق" إلى "متاح" تاني عشان المعلم يقدر يطلب سحبه تاني
       batch.update(FirebaseFirestore.instance.collection('teachers').doc(teacherId), {
         'pendingBalance': FieldValue.increment(-amount),
         'availableBalance': FieldValue.increment(amount),
@@ -146,7 +142,7 @@ Future<String?> updateStudentData({
       'phone': studentData['phone'],
       'stage': studentData['stage'],
     });
-    return null; // نجاح
+    return null; 
   } catch (e) {
     return 'حدث خطأ أثناء التعديل: $e';
   }
@@ -192,7 +188,7 @@ return
   } catch (e) {
     return e.toString();
   }
-} Future<void> addParent(Map<String, dynamic> data) async => await FirebaseFirestore.instance.collection('parents').add(data); // 👈 دالة إضافة ولي الأمر
+} Future<void> addParent(Map<String, dynamic> data) async => await FirebaseFirestore.instance.collection('parents').add(data); 
 
 Future<String?> updateParentData({
   required String parentId,
@@ -203,7 +199,7 @@ Future<String?> updateParentData({
       'name': parentData['name'],
       'email': parentData['email'],
     });
-    return null; // نجاح
+    return null; 
   } catch (e) {
     return 'حدث خطأ أثناء التعديل: $e';
   }
@@ -212,7 +208,7 @@ Future<String?> updateParentData({
 Future<String?> deleteParent(String parentId) async {
   try {
     await FirebaseFirestore.instance.collection('parents').doc(parentId).delete();
-    return null; // نجاح
+    return null; 
   } catch (e) {
     return 'حدث خطأ أثناء الحذف: $e';
   }
@@ -225,15 +221,14 @@ Future<String?> updateTeacherData({
   required Map<String, dynamic> teacherBasicData,
 }) async {
   try {
-    // نقوم بتحديث البيانات الأساسية والمواد
     await FirebaseFirestore.instance.collection('teachers').doc(teacherId).update({
       'name': teacherBasicData['name'],
       'phone': teacherBasicData['phone'],
       'email': teacherBasicData['email'],
       'specialty': teacherBasicData['specialty'],
-      'assignedCourses': newCourses, // تحديث المصفوفة بالكامل
+      'assignedCourses': newCourses, 
     });
-    return null; // نجاح
+    return null; 
   } catch (e) {
     return 'حدث خطأ أثناء التعديل: $e';
   }
@@ -246,18 +241,15 @@ Future<String?> updateTeacherData({
 
 
 
-// داخل AdminCubit
 Future<void> deactivateStudentAndClearData({required String userId}) async {
   try {
     final WriteBatch batch = FirebaseFirestore.instance.batch();
 
-    // 1. تحديث بيانات الطالب (إيقاف الحساب + مسح الباقات)
     batch.update(FirebaseFirestore.instance.collection('students').doc(userId), {
       'isActive': false,
       'unlockedPackages': [], 
     });
 
-    // 2. حذف سجلات تقدم الطالب من كوليكشن student_progress
     final progressQuery = await FirebaseFirestore.instance
         .collection('student_progress')
         .where('studentId', isEqualTo: userId)
@@ -287,7 +279,6 @@ Future<String?> deleteTeacher({required String teacherId}) async {
 
 Future<void> withdrawEarnings(double amount) async {
   try {
-    // نفترض أن بيانات المالية مخزنة في دوكيومنت باسم 'financials' داخل كوليكشن 'platform_data'
     await FirebaseFirestore.instance
         .collection('platform_data')
         .doc('financials')

@@ -1,10 +1,9 @@
-// lib/features/teacher/presentation/screens/manage_sections/manage_media_content_screen.dart
 import 'dart:io';
-import 'dart:convert'; // 👈 ضروري لفك تشفير بيانات JSON القادمة من Cloudinary
+import 'dart:convert'; 
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:http/http.dart' as http; // 👈 تأكد من إضافة حزمة http في pubspec.yaml
+import 'package:http/http.dart' as http; 
 
 class ManageMediaContentScreen extends StatefulWidget {
   final String lessonName;
@@ -26,10 +25,8 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
   bool _isUploading = false;
   final ImagePicker _picker = ImagePicker();
 
-  // ⚠️ إعدادات حسابك في Cloudinary (استبدلها ببيانات حسابك من لوحة التحكم)
-// ⚠️ الإعدادات الصحيحة المطابقة لحسابك الآن بعد فحص الـ Preset:
-  final String _cloudName = "dq8borvfa"; // 👈 إذا استمر الـ 401، تأكد من الـ Cloud Name الصريح من صفحة الـ Dashboard الرئيسية
-  final String _uploadPreset = "ea7g0e9u"; // ✅ مضبوط وصحيح تماماً كما بالصورة/ قم بإنشاء Unsigned Preset من إعدادات الرفع في موقع Cloudinary
+  final String _cloudName = "dq8borvfa"; 
+  final String _uploadPreset = "ea7g0e9u"; 
 
   @override
   void initState() {
@@ -37,7 +34,6 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
     _currentVideoOnServer = widget.initialContent;
   }
 
-  // اختيار فيديو من المعرض
   Future<void> _pickVideoFromGallery() async {
     try {
       final XFile? pickedFile = await _picker.pickVideo(
@@ -64,14 +60,12 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
     }
   }
 
-  // ✅ الرفع الحقيقي المباشر إلى Cloudinary API
   Future<void> _uploadVideoToServer() async {
     if (_selectedVideoFile == null) return;
 
     setState(() => _isUploading = true);
 
     try {
-      // رابط الرفع الخاص بالفيديوهات في Cloudinary
       final url = Uri.parse('https://api.cloudinary.com/v1_1/$_cloudName/video/upload');
       
       final request = http.MultipartRequest('POST', url)
@@ -84,7 +78,6 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
         final responseData = await response.stream.bytesToString();
         final jsonResponse = jsonDecode(responseData);
         
-        // الرابط السحابي النهائي الذي سنقوم بحفظه في Firestore للطلاب
         final String videoUrl = jsonResponse['secure_url']; 
 
         if (!mounted) return;
@@ -98,7 +91,6 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
           const SnackBar(content: Text('تم رفع الفيديو إلى Cloudinary وبثه بنجاح 🎉', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Color(0xFF27AE60)),
         );
         
-        // إرجاع رابط الفيديو الجديد إلى شاشة الـ Hub ليقوم الـ Cubit بتحديث الفايربيز فوراً
         Navigator.pop(context, _currentVideoOnServer);
       } else {
         throw Exception("فشل الرفع، رمز الحالة: ${response.statusCode}");
@@ -138,13 +130,12 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
                   Navigator.pop(context);
                   if (!mounted) return; 
                   setState(() {
-                    _currentVideoOnServer = null; // ✅ تعيينه بـ null يحل مشكلة الحالة فوراً
+                    _currentVideoOnServer = null; 
                     _selectedVideoFile = null;
                   });
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('تم حذف الفيديو من السيرفر', style: TextStyle(fontFamily: 'Cairo')), backgroundColor: Colors.redAccent),
                   );
-                  // إرجاع قيمة فارغة للـ Hub لحذف الرابط تماماً من مستند الـ Firestore
                   Navigator.pop(context, '');
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent, elevation: 0, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
@@ -161,7 +152,6 @@ class _ManageMediaContentScreenState extends State<ManageMediaContentScreen> {
   Widget build(BuildContext context) {
     final double headerHeight = (MediaQuery.of(context).size.height * 0.20) - 20;
     
-    // ✅ الحل النهائي والأكيد لمشكلة التحديث: التحقق من وجود القيمة وعدم كونها فارغة نصياً
     final bool isVideoLive = _currentVideoOnServer != null && _currentVideoOnServer!.trim().isNotEmpty;
 
     return Scaffold(

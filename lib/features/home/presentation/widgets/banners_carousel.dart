@@ -1,6 +1,5 @@
-// lib/features/home/presentation/widgets/banners_carousel.dart
 import 'dart:async';
-import 'package:fahem/core/constants/colors.dart'; // المسار الصحيح تماماً كما في جهازك
+import 'package:fahem/core/constants/colors.dart'; 
 import 'package:flutter/material.dart';
 
 class BannersCarousel extends StatefulWidget {
@@ -15,9 +14,8 @@ class _BannersCarouselState extends State<BannersCarousel> {
   int _currentPage = 0;
   Timer? _timer;
 
-  // القائمة تحتوي على مسارات الصور المصممة والمطابقة للـ Explorer عندك
   final List<String> _bannerImages = [
-    'assets/images/banner1.png', // تغيير png إلى jpg
+    'assets/images/banner1.png', 
     'assets/images/banner2.png',
     'assets/images/banner3.jpg',
   ];
@@ -25,7 +23,6 @@ class _BannersCarouselState extends State<BannersCarousel> {
   @override
   void initState() {
     super.initState();
-    // تقليب البنرات تلقائياً كل 4 ثوانٍ
     _timer = Timer.periodic(const Duration(seconds: 4), (Timer timer) {
       if (_currentPage < _bannerImages.length - 1) {
         _currentPage++;
@@ -54,7 +51,7 @@ class _BannersCarouselState extends State<BannersCarousel> {
     return Column(
       children: [
         SizedBox(
-          height: 140, // ارتفاع مثالي ومناسب جداً لأبعاد البنرات العريضة
+          height: 140, 
           child: PageView.builder(
             controller: _pageController,
             onPageChanged: (int page) {
@@ -68,14 +65,13 @@ class _BannersCarouselState extends State<BannersCarousel> {
                 margin: const EdgeInsets.symmetric(horizontal: 8),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  // حل مشكلة الـ withOpacity واستبدالها بالطريقة الحديثة المتوافقة مع تحديثات فلاتر 2026
                   color: AppColors.primary.withAlpha((0.05 * 255).toInt()), 
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(20),
                   child: Image.asset(
                     _bannerImages[index],
-                    fit: BoxFit.fill, // يضمن تمدد الصورة لملء المساحة كاملة
+                    fit: BoxFit.fill,
                     errorBuilder: (context, error, stackTrace) {
                       List<IconData> icons = [
                         Icons.lightbulb_outline_rounded,
@@ -97,7 +93,6 @@ class _BannersCarouselState extends State<BannersCarousel> {
           ),
         ),
         const SizedBox(height: 10),
-        // نقاط المؤشر السفلي المتفاعلة (Dots Indicator)
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: List.generate(

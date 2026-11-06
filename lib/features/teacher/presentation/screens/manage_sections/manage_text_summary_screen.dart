@@ -36,7 +36,6 @@ class _ManageTextSummaryScreenState extends State<ManageTextSummaryScreen> {
     }
   }
 
-  // دالة مساعدة لتصميم حقل الإدخال
   InputDecoration _inputDecoration(String label) => InputDecoration(
     labelText: label,
     labelStyle: const TextStyle(fontFamily: 'Cairo'),

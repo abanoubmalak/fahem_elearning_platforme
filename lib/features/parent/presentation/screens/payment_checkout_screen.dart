@@ -1,10 +1,9 @@
-// lib/features/parent/presentation/screens/payment_checkout_screen.dart
 import 'package:fahem/features/parent/presentation/cubit/parent_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class PaymentCheckoutScreen extends StatefulWidget {
-  final double packageAmount; // 👈 السعر الموحد لكل مادة
+  final double packageAmount; 
   final Function(int) onTabSwitch;
 
   const PaymentCheckoutScreen({

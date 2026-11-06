@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/admin_dashboard_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
 import 'package:fahem/features/admin/presentation/screens/admin_profile_screen.dart'; // 👈 استيراد شاشة البروفايل الجديدة
@@ -10,12 +9,10 @@ class AdminDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 💎 توحيد أبعاد الترويسة 💎
     final double headerHeight = MediaQuery.of(context).size.height * 0.18;
 
     return BlocBuilder<AdminCubit, AdminState>(
       builder: (context, state) {
-        // متغيرات لاستقبال البيانات الحية
         int teachersCount = 0;
         int studentsCount = 0;
         int parentsCount = 0;
@@ -36,7 +33,6 @@ class AdminDashboardScreen extends StatelessWidget {
             textDirection: TextDirection.rtl,
             child: Stack(
               children: [
-                // ==================== 1. المحتوى (الإحصائيات الحية) ====================
                 Positioned.fill(
                   child: SingleChildScrollView(
                     physics: const BouncingScrollPhysics(),
@@ -50,11 +46,9 @@ class AdminDashboardScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        // 💎 كارت أرباح المنصة الرئيسي (Full Width) 💎
                         _buildMainEarningsCard(platformEarnings),
                         const SizedBox(height: 16),
                         
-                        // 💎 الإحصائيات الفرعية (2x2 Grid) 💎
                         Row(
                           children: [
                             Expanded(child: _buildStatCard('إجمالي الطلاب', studentsCount.toString(), Icons.groups_rounded, const Color(0xFF27AE60), const Color(0xFFEAFAF1))),
@@ -75,7 +69,6 @@ class AdminDashboardScreen extends StatelessWidget {
                   ),
                 ),
 
-                // ==================== 2. البانر العلوي الفيروزي ====================
                 Positioned(
                   top: 0, left: 0, right: 0, height: headerHeight,
                   child: Container(
@@ -88,7 +81,6 @@ class AdminDashboardScreen extends StatelessWidget {
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: Row(
                           children: [
-                            // 👈 زر الدخول للملف الشخصي الجديد
                             Container(
                               decoration: BoxDecoration(
                                 color: Colors.white.withAlpha(38),
@@ -124,7 +116,7 @@ class AdminDashboardScreen extends StatelessWidget {
 
                             const Spacer(),
 
-                            const SizedBox(width: 48), // للمحافظة على التوسيط البصري للعنوان
+                            const SizedBox(width: 48), 
                           ],
                         ),
                       ),
@@ -139,11 +131,6 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  // =========================================================
-  // 🎨 تصميمات الكروت الجمالية
-  // =========================================================
-
-  // 1. الكارت الرئيسي لأرباح المنصة (تصميم مميز)
   Widget _buildMainEarningsCard(double amount) {
     return Container(
       width: double.infinity,
@@ -183,7 +170,6 @@ class AdminDashboardScreen extends StatelessWidget {
     );
   }
 
-  // 2. الكروت الفرعية المربعة
   Widget _buildStatCard(String title, String value, IconData icon, Color mainColor, Color bgColor) {
     return Container(
       padding: const EdgeInsets.all(20),

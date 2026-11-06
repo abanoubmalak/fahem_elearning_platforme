@@ -1,4 +1,3 @@
-// lib/features/lessons/widgets/lesson_list_item.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
@@ -7,7 +6,7 @@ class LessonListItem extends StatelessWidget {
   final bool isCompleted;
   final VoidCallback onWatchVideo;
   final VoidCallback onTakeQuiz;
-  final VoidCallback onViewSummary; // الإجراء الجديد المضاف
+  final VoidCallback onViewSummary; 
 
   const LessonListItem({
     super.key,
@@ -15,7 +14,7 @@ class LessonListItem extends StatelessWidget {
     required this.isCompleted,
     required this.onWatchVideo,
     required this.onTakeQuiz,
-    required this.onViewSummary, // تمريره في الـ Constructor
+    required this.onViewSummary, 
   });
 
   @override
@@ -31,7 +30,6 @@ class LessonListItem extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // السطر العلوي: حالة الدرس وعنوانه
           Row(
             children: [
               Icon(
@@ -55,11 +53,9 @@ class LessonListItem extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           
-          // السطر السفلي: أزرار المحتوى الثلاثية التفاعلية
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 1. زر فيديو الدرس
               Center(
                 child: Expanded(
                   child: OutlinedButton(
@@ -86,13 +82,12 @@ class LessonListItem extends StatelessWidget {
               ),
               const SizedBox(width: 16),
               
-              // 2. زر بدء الاختبار
               Center(
                 child: Expanded(
                   child: ElevatedButton(
                     onPressed: onTakeQuiz,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:  AppColors.primaryTeal, // لون ذهبي معتمد للتقييم والاختبارات
+                      backgroundColor:  AppColors.primaryTeal, 
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
@@ -115,13 +110,12 @@ class LessonListItem extends StatelessWidget {
               ),
               const SizedBox(width: 16),
 
-              // 3. زر ملخص الدرس (الزر الجديد)
               Center(
                 child: Expanded(
                   child: OutlinedButton(
                     onPressed: onViewSummary,
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF007A7C), // درجة لونية فيروزية داكنة منسقة للملخصات
+                      foregroundColor: const Color(0xFF007A7C),
                       side: const BorderSide(color: Color(0xFF007A7C)),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),

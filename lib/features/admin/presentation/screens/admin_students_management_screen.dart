@@ -1,4 +1,3 @@
-// lib/features/admin/presentation/screens/students/admin_students_management_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/core/routing/routes.dart';
 import 'package:flutter/material.dart';
@@ -13,7 +12,6 @@ class AdminStudentsManagementScreen extends StatefulWidget {
 }
 
 class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementScreen> {
-  // ── نص البحث ──
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
@@ -29,15 +27,12 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
     super.dispose();
   }
 
-  // ── دالة البحث ──
- // ── دالة البحث ──
   void _onSearchChanged() {
     setState(() {
       _searchQuery = _searchController.text.trim().toLowerCase();
     });
   }
 
-  // ── فلترة الطلاب الحقيقيين القادمين من Firestore ──
   List<Map<String, dynamic>> _filterStudents(List<Map<String, dynamic>> allStudents) {
     if (_searchQuery.isEmpty) return allStudents;
     return allStudents.where((student) {
@@ -47,14 +42,10 @@ class _AdminStudentsManagementScreenState extends State<AdminStudentsManagementS
     }).toList();
   }
 
-  // ── دالة تغيير حالة الطالب ──
-  // ── دالة تغيير حالة الطالب في Firestore ──
- // استبدل دالة _toggleStudentStatus الحالية بهذه الدالة
 void _toggleStudentStatus(Map<String, dynamic> student) {
   final bool currentStatus = student['isActive'] ?? true;
 
   if (currentStatus) {
-    // الحالة الحالية "مفعل"، نريد إيقافه (مسح البيانات)
     showDialog(
       context: context,
       builder: (ctx) => Directionality(
@@ -80,7 +71,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
       ),
     );
   } else {
-    // الحالة الحالية "متوقف"، نريد تفعيله (ببساطة نغير الحالة)
     context.read<AdminCubit>().toggleUserStatus(
       collection: 'students',
       userId: student['id'],
@@ -98,13 +88,11 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            // ── محتوى الشاشة ──
             Positioned.fill(
               child: Column(
                 children: [
                   SizedBox(height: headerHeight + 20),
                   
-                  // شريط البحث
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: TextField(
@@ -125,8 +113,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
                   ),
                   const SizedBox(height: 16),
 
-                  // قائمة الطلاب
-                  // قائمة الطلاب
                   Expanded(
                     child: BlocBuilder<AdminCubit, AdminState>(
                       builder: (context, state) {
@@ -161,7 +147,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
               ),
             ),
 
-            // ── الهيدر الموحد ──
             Positioned(
               top: 0, left: 0, right: 0, height: headerHeight,
               child: Container(
@@ -171,10 +156,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
                     begin: Alignment.topRight,
                     end: Alignment.bottomLeft,
                   ),
-                  // borderRadius: BorderRadius.only(
-                  //   bottomLeft: Radius.circular(30),
-                  //   bottomRight: Radius.circular(30),
-                  // ),
                 ),
                 child: const SafeArea(
                   child: Center(
@@ -197,8 +178,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
     );
   }
 
-  // ── كارت عرض بيانات الطالب ──
- // ── كارت عرض بيانات الطالب ──
   Widget _buildStudentCard(Map<String, dynamic> student) {
     final bool isActive = student['isActive'] ?? true;
     final String name = student['name'] ?? 'بدون اسم';
@@ -228,7 +207,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
             padding: const EdgeInsets.all(16.0),
             child: Row(
               children: [
-                // الصورة الرمزية
                 CircleAvatar(
                   radius: 24,
                   backgroundColor: const Color(0xFFEDF7F7),
@@ -238,7 +216,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
                   ),
                 ),
                 const SizedBox(width: 14),
-                // تفاصيل الطالب
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -267,7 +244,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
                     ],
                   ),
                 ),
-                // التحكم في الحالة (حظر / تفعيل)
                 Switch(
                   value: isActive,
                   activeColor: const Color(0xFF005F61),
@@ -281,7 +257,6 @@ void _toggleStudentStatus(Map<String, dynamic> student) {
     );
   }
 
-  // ── شاشة فارغة في حالة عدم وجود نتائج ──
   Widget _buildEmptyState() {
     return Center(
       child: Column(

@@ -1,4 +1,3 @@
-// lib/features/lessons/presentation/screens/lesson_summary_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
@@ -20,7 +19,6 @@ class LessonSummaryScreen extends StatelessWidget {
         backgroundColor: const Color(0xFF004D4F),
         body: Column(
           children: [
-            // ── البانر العلوي ──
             Container(
               width: double.infinity,
               decoration: const BoxDecoration(
@@ -53,7 +51,6 @@ class LessonSummaryScreen extends StatelessWidget {
               ),
             ),
 
-            // ── الحاوية الرئيسية للملخصات ──
             Expanded(
               child: Container(
                 width: double.infinity,
@@ -69,7 +66,6 @@ class LessonSummaryScreen extends StatelessWidget {
                         Text(lessonTitle, style: const TextStyle(fontFamily: 'Cairo', fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textMain)),
                         const SizedBox(height: 20),
 
-                        // ── مربع واحد يحتوي على جميع الملخصات ──
                         summaries.isEmpty
                             ? const Center(child: Text('لا توجد ملخصات لهذا الدرس حالياً.', style: TextStyle(fontFamily: 'Cairo')))
                             : Container(
@@ -90,13 +86,10 @@ class LessonSummaryScreen extends StatelessWidget {
                                     return Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
-                                        // النص الأصلي
                                         Text(summary['originalText'] ?? '', style: const TextStyle(fontFamily: 'Cairo', fontSize: 14.5, fontWeight: FontWeight.bold, color: Color(0xFF005F61), height: 1.4)),
                                         const SizedBox(height: 0),
-                                        // الشرح
                                         Text(summary['summaryText'] ?? '', style: const TextStyle(fontFamily: 'Cairo', fontSize: 13.5, color: AppColors.textMain, height: 1.6)),
                                         
-                                        // فاصل بين الملخصات (فقط إذا لم يكن العنصر الأخير)
                                         if (!isLast)
                                           const Padding(
                                             padding: EdgeInsets.symmetric(vertical: 0.0),

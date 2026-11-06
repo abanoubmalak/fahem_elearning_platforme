@@ -1,12 +1,11 @@
-// lib/features/parent/presentation/screens/link_child_screen.dart
-import 'package:cloud_firestore/cloud_firestore.dart'; // 👈 استيراد الفايرستور للاستعلام الحي
+import 'package:cloud_firestore/cloud_firestore.dart'; 
 import 'package:fahem/features/parent/presentation/cubit/parent_cubit.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class LinkChildScreen extends StatefulWidget {
-  final Function(int) onTabSwitch; // للانتقال السلس
+  final Function(int) onTabSwitch; 
 
   const LinkChildScreen({super.key, required this.onTabSwitch});
 
@@ -19,11 +18,9 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
   bool _isSearching = false;
   bool _childFound = false;
 
-  // متغيرات حفظ بيانات الطالب الحقيقي العائد من السيرفر
   String _foundStudentName = '';
   String _foundStudentStage = '';
 
-  // 💎 دالة البحث الحي الحقيقي عن الطالب في قاعدة البيانات باستخدام الكود
   void _searchForChild() async {
     final String enteredCode = _codeController.text.trim();
     if (enteredCode.isEmpty) {
@@ -43,7 +40,6 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
     FocusScope.of(context).unfocus(); 
 
     try {
-      // الاستعلام عن كود الطالب حياً من كوليكشن students الموثق بالـ Seeder
       QuerySnapshot studentQuery = await FirebaseFirestore.instance
           .collection('students')
           .where('linkCode', isEqualTo: enteredCode)
@@ -83,11 +79,9 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
     }
   }
 
-  // 💎 دالة تأكيد الربط السحابي والانتقال الآمن للرئيسية
   void _confirmLinking() async {
     setState(() => _isSearching = true);
     try {
-      // استدعاء دالة الكوبيت الرسمية والمحكمة لتنفيذ الـ WriteBatch سحابياً
       await context.read<ParentCubit>().linkChild(_codeController.text.trim());
       
       if (mounted) {
@@ -104,7 +98,7 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
           _codeController.clear();
         });
         
-        widget.onTabSwitch(0); // العودة المباشرة للوحة التحكم الرئيسية لولي الأمر
+        widget.onTabSwitch(0); 
       }
     } catch (e) {
       if (mounted) {
@@ -129,7 +123,6 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         
-        // ==================== 1. الترويسة الاحترافية المتناسقة مع الشاشات السابقة ====================
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -142,7 +135,7 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
                 begin: Alignment.topRight, 
                 end: Alignment.bottomLeft,
               ),
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(35)), // تطابق انحناء الرئيسية لشكل متناسق واحترافي
+              borderRadius: BorderRadius.vertical(bottom: Radius.circular(35)), 
             ),
           ),
           title: const Text(
@@ -152,14 +145,12 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
           centerTitle: true,
         ),
         
-        // ==================== 2. جسم الشاشة المطور والمنسق بالكامل ====================
         body: SingleChildScrollView(
           physics: const BouncingScrollPhysics(),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // كارت التعليمات والإرشاد
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -192,12 +183,11 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
               ),
               const SizedBox(height: 10),
 
-              // حقل إدخال الكود الفاخر والمنسق بالخط الإنجليزي المخصص للأرقام والأكواد
               TextField(
                 controller: _codeController,
                 style: const TextStyle(fontFamily: 'Montserrat', fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1F2937), letterSpacing: 1),
                 textCapitalization: TextCapitalization.characters,
-                inputFormatters: [LengthLimitingTextInputFormatter(15)], // حماية وضبط طول الحقل
+                inputFormatters: [LengthLimitingTextInputFormatter(15)], 
                 decoration: InputDecoration(
                   hintText: 'مثال: FAHEM-XXXX',
                   hintStyle: const TextStyle(fontFamily: 'Montserrat', fontSize: 14, color: Colors.grey, fontWeight: FontWeight.w500),
@@ -210,7 +200,6 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
               ),
               const SizedBox(height: 24),
 
-              // زر البحث الأساسي
               if (!_childFound)
                 SizedBox(
                   width: double.infinity,
@@ -229,7 +218,6 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
                   ),
                 ),
 
-              // ==================== 3. كارت نتيجة البحث المطور والحي الحقيقي ====================
               AnimatedSize(
                 duration: const Duration(milliseconds: 300),
                 curve: Curves.easeInOut,
@@ -271,7 +259,6 @@ class _LinkChildScreenState extends State<LinkChildScreen> {
                           ),
                           const SizedBox(height: 24),
                           
-                          // زر تأكيد الربط الفاخر والنهائي لولي الأمر
                           SizedBox(
                             width: double.infinity, height: 52,
                             child: ElevatedButton.icon(

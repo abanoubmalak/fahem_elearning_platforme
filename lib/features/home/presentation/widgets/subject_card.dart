@@ -1,9 +1,8 @@
-// lib/features/home/widgets/subject_card.dart
 import 'package:flutter/material.dart';
 
 class SubjectCard extends StatelessWidget {
   final String title;
-  final double progress; // نسبة التقدم من 0.0 إلى 1.0
+  final double progress; 
   final IconData icon;
 
   const SubjectCard({
@@ -32,11 +31,9 @@ class SubjectCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // أيقونة المادة الخلفية
           Icon(icon, size: 35, color: const Color(0xFF269A9E)),
           const SizedBox(height: 8),
           
-          // اسم المادة
           Text(
             title,
             style: const TextStyle(
@@ -48,7 +45,6 @@ class SubjectCard extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           
-          // نسبة التقدم وشريط التحميل
           Row(
             children: [
               Text(

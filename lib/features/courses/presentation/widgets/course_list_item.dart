@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 
 class CourseListItem extends StatelessWidget {
   final String title;
-  //final String grade;
   final double progress;
   final IconData icon;
 
   const CourseListItem({
     super.key,
     required this.title,
-    //required this.grade,
     required this.progress,
     required this.icon,
   });
@@ -27,7 +25,6 @@ class CourseListItem extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // 1. الصورة المصغرة للمادة (بألوان جذابة)
           Container(
             width: 70,
             height: 70,
@@ -39,7 +36,6 @@ class CourseListItem extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           
-          // 2. تفاصيل الكورس ونسبة التقدم
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +80,6 @@ class CourseListItem extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           
-          // 3. أيقونة العين للانتقال للتفاصيل
           Icon(
             Icons.visibility_outlined,
             color: AppColors.primary.withOpacity(0.7),

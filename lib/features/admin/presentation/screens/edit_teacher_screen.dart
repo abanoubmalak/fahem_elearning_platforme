@@ -1,5 +1,3 @@
-// lib/features/admin/presentation/screens/teachers/edit_teacher_screen.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fahem/core/constants/colors.dart';
 import 'package:fahem/features/admin/presentation/cubit/admin_cubit.dart';
@@ -7,9 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-// ─────────────────────────────────────────────
-// نموذج بيانات المادة
-// ─────────────────────────────────────────────
 class AssignedSubject {
   final String subjectCode;
   final String subjectName;
@@ -29,9 +24,6 @@ class AssignedSubject {
       term == other.term;
 }
 
-// ─────────────────────────────────────────────
-// الشاشة الرئيسية
-// ─────────────────────────────────────────────
 class EditTeacherScreen extends StatefulWidget {
   final Map<String, dynamic> teacherData;
 
@@ -44,22 +36,18 @@ class EditTeacherScreen extends StatefulWidget {
 class _EditTeacherScreenState extends State<EditTeacherScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  // ── Controllers ──
   late TextEditingController _nameController;
   late TextEditingController _emailController;
   late TextEditingController _phoneController;
 
-  // ── Subject picker state ──
   String? _selectedSubject;
   String? _selectedStage;
   String? _selectedTerm;
 
-  // ── Assigned subjects list ──
   late List<AssignedSubject> _assignedSubjects;
 
   bool _isSaving = false;
 
-  // ── Static data ──
   static const Map<String, List<String>> _subjectsByStage = {
     'الصف الأول الابتدائي': ['لغة عربية', 'لغة إنجليزية', 'رياضيات'],
     'الصف الثاني الابتدائي': ['لغة عربية', 'لغة إنجليزية', 'رياضيات'],
@@ -69,42 +57,42 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
       'لغة إنجليزية',
       'رياضيات',
       'علوم',
-      'دراسات اجتماعية'
+      'دراسات اجتماعية',
     ],
     'الصف الخامس الابتدائي': [
       'لغة عربية',
       'لغة إنجليزية',
       'رياضيات',
       'علوم',
-      'دراسات اجتماعية'
+      'دراسات اجتماعية',
     ],
     'الصف السادس الابتدائي': [
       'لغة عربية',
       'لغة إنجليزية',
       'رياضيات',
       'علوم',
-      'دراسات اجتماعية'
+      'دراسات اجتماعية',
     ],
     'الصف الأول الإعدادي': [
       'لغة عربية',
       'لغة إنجليزية',
       'رياضيات',
       'علوم',
-      'دراسات اجتماعية'
+      'دراسات اجتماعية',
     ],
     'الصف الثاني الإعدادي': [
       'لغة عربية',
       'لغة إنجليزية',
       'رياضيات',
       'علوم',
-      'دراسات اجتماعية'
+      'دراسات اجتماعية',
     ],
     'الصف الثالث الإعدادي': [
       'لغة عربية',
       'لغة إنجليزية',
       'رياضيات',
       'علوم',
-      'دراسات اجتماعية'
+      'دراسات اجتماعية',
     ],
   };
 
@@ -145,12 +133,15 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
   void initState() {
     super.initState();
 
-    _nameController =
-        TextEditingController(text: widget.teacherData['name'] ?? '');
-    _emailController =
-        TextEditingController(text: widget.teacherData['email'] ?? '');
-    _phoneController =
-        TextEditingController(text: widget.teacherData['phone'] ?? '');
+    _nameController = TextEditingController(
+      text: widget.teacherData['name'] ?? '',
+    );
+    _emailController = TextEditingController(
+      text: widget.teacherData['email'] ?? '',
+    );
+    _phoneController = TextEditingController(
+      text: widget.teacherData['phone'] ?? '',
+    );
 
     final List<dynamic> existingCourses =
         (widget.teacherData['assignedCourses'] as List<dynamic>?) ?? [];
@@ -188,9 +179,6 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
     super.dispose();
   }
 
-  // ─────────────────────────────────────────────
-  // Validation helpers
-  // ─────────────────────────────────────────────
   bool _isValidEmail(String value) {
     final email = value.trim();
     final emailRegex = RegExp(
@@ -210,17 +198,15 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
     return _subjectCodes[subjectName];
   }
 
-  // ─────────────────────────────────────────────
-  // Firestore check: هل المادة واخدها معلم آخر؟
-  // ─────────────────────────────────────────────
   Future<String?> _findTeacherWhoAlreadyHasSubject({
     required String subjectCode,
     required String stage,
     required String term,
   }) async {
     try {
-      final snapshot =
-          await FirebaseFirestore.instance.collection('teachers').get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('teachers')
+          .get();
 
       final currentTeacherId = widget.teacherData['id']?.toString();
 
@@ -239,10 +225,12 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
 
-        final exists = courses.any((course) =>
-            course['subject'] == subjectCode &&
-            course['stage'] == stage &&
-            course['term'] == term);
+        final exists = courses.any(
+          (course) =>
+              course['subject'] == subjectCode &&
+              course['stage'] == stage &&
+              course['term'] == term,
+        );
 
         if (exists) {
           return (data['name'] ?? doc.id).toString();
@@ -255,9 +243,6 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────
-  // Logic
-  // ─────────────────────────────────────────────
   Future<void> _addSubject() async {
     if (_selectedStage == null ||
         _selectedSubject == null ||
@@ -451,7 +436,9 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
           'stage': subjectObj.stage,
           'term': subjectObj.term,
           'pdfs': existingCourse is Map ? (existingCourse['pdfs'] ?? 0) : 0,
-          'quizzes': existingCourse is Map ? (existingCourse['quizzes'] ?? 0) : 0,
+          'quizzes': existingCourse is Map
+              ? (existingCourse['quizzes'] ?? 0)
+              : 0,
           'videos': existingCourse is Map ? (existingCourse['videos'] ?? 0) : 0,
         };
       }).toList();
@@ -466,10 +453,10 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
       };
 
       final error = await context.read<AdminCubit>().updateTeacherData(
-            teacherId: teacherId,
-            newCourses: updatedCoursesList,
-            teacherBasicData: teacherBasicData,
-          );
+        teacherId: teacherId,
+        newCourses: updatedCoursesList,
+        teacherBasicData: teacherBasicData,
+      );
 
       if (!mounted) return;
 
@@ -486,10 +473,7 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              error,
-              style: const TextStyle(fontFamily: 'Cairo'),
-            ),
+            content: Text(error, style: const TextStyle(fontFamily: 'Cairo')),
             backgroundColor: Colors.redAccent,
           ),
         );
@@ -501,9 +485,6 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
     }
   }
 
-  // ─────────────────────────────────────────────
-  // Build
-  // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     final double headerHeight = MediaQuery.of(context).size.height * 0.16;
@@ -612,19 +593,20 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
                           Expanded(
                             child: DropdownButtonFormField<String>(
                               value: _selectedSubject,
-                              decoration: _inputDecoration(
-                                'المادة الدراسية',
-                                Icons.book_rounded,
-                              ).copyWith(
-                                hintText: _selectedStage == null
-                                    ? 'اختر المرحلة أولاً'
-                                    : 'اختر المادة',
-                                hintStyle: const TextStyle(
-                                  fontFamily: 'Cairo',
-                                  fontSize: 13,
-                                  color: Colors.grey,
-                                ),
-                              ),
+                              decoration:
+                                  _inputDecoration(
+                                    'المادة الدراسية',
+                                    Icons.book_rounded,
+                                  ).copyWith(
+                                    hintText: _selectedStage == null
+                                        ? 'اختر المرحلة أولاً'
+                                        : 'اختر المادة',
+                                    hintStyle: const TextStyle(
+                                      fontFamily: 'Cairo',
+                                      fontSize: 13,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
                               isExpanded: true,
                               style: const TextStyle(
                                 fontFamily: 'Cairo',
@@ -652,7 +634,8 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
                               },
                               onChanged: _selectedStage == null
                                   ? null
-                                  : (val) => setState(() => _selectedSubject = val),
+                                  : (val) =>
+                                        setState(() => _selectedSubject = val),
                             ),
                           ),
                           const SizedBox(width: 10),
@@ -771,7 +754,6 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
               ),
             ),
 
-            // ── الهيدر الموحد ──
             Positioned(
               top: 0,
               left: 0,
@@ -819,33 +801,25 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
     );
   }
 
-  // ─────────────────────────────────────────────
-  // Widgets مساعدة
-  // ─────────────────────────────────────────────
   Widget _buildSectionTitle(String title) => Text(
-        title,
-        style: const TextStyle(
-          fontFamily: 'Cairo',
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-          color: Colors.grey,
-        ),
-      );
+    title,
+    style: const TextStyle(
+      fontFamily: 'Cairo',
+      fontSize: 14,
+      fontWeight: FontWeight.bold,
+      color: Colors.grey,
+    ),
+  );
 
   InputDecoration _inputDecoration(String label, IconData icon) =>
       InputDecoration(
         labelText: label,
         labelStyle: const TextStyle(fontFamily: 'Cairo', fontSize: 13),
         prefixIcon: Icon(icon, color: const Color(0xFF005F61)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(16),
-          borderSide: const BorderSide(
-            color: Color(0xFF005F61),
-            width: 2,
-          ),
+          borderSide: const BorderSide(color: Color(0xFF005F61), width: 2),
         ),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
@@ -867,7 +841,8 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
       inputFormatters: inputFormatters,
       style: const TextStyle(fontFamily: 'Cairo'),
       decoration: _inputDecoration(label, icon),
-      validator: validator ??
+      validator:
+          validator ??
           (val) {
             if ((val ?? '').trim().isEmpty) {
               return 'هذا الحقل مطلوب';
@@ -879,10 +854,12 @@ class _EditTeacherScreenState extends State<EditTeacherScreen> {
 
   Widget _buildSubjectChip(AssignedSubject entry) {
     final bool isPrimary = entry.stage.contains('الابتدائي');
-    final Color chipColor =
-        isPrimary ? const Color(0xFFE8F5E9) : const Color(0xFFE3F2FD);
-    final Color textColor =
-        isPrimary ? const Color(0xFF2E7D32) : const Color(0xFF1565C0);
+    final Color chipColor = isPrimary
+        ? const Color(0xFFE8F5E9)
+        : const Color(0xFFE3F2FD);
+    final Color textColor = isPrimary
+        ? const Color(0xFF2E7D32)
+        : const Color(0xFF1565C0);
 
     return Chip(
       avatar: CircleAvatar(

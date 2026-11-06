@@ -1,4 +1,3 @@
-// lib/features/parent/presentation/screens/parent_home_screen.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fahem/features/parent/presentation/cubit/parent_cubit.dart';
@@ -41,14 +40,12 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     }
   }
 
-  // 💎 دالة إظهار نافذة الحذف مأمنة تماماً ضد أخطاء الـ Provider 💎
   void _showDeleteConfirmationDialog(String childId, String childName) {
-    // 👈 الحل السحري: كبسلة وامساك الـ Cubit من الـ context الخارجي للشاشة قبل بناء الـ Route الجديد
     final parentCubit = context.read<ParentCubit>();
 
     showDialog(
       context: context,
-      builder: (BuildContext dialogContext) { // 👈 تغيير الاسم إلى dialogContext لمنع التداخل
+      builder: (BuildContext dialogContext) { 
         return Directionality(
           textDirection: TextDirection.rtl,
           child: AlertDialog(
@@ -71,7 +68,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
               ElevatedButton(
                 onPressed: () async {
-                  Navigator.pop(dialogContext); // قفل نافذة التأكيد فورًا
+                  Navigator.pop(dialogContext); 
 
                   try {
                     await parentCubit.removeChild(childId);

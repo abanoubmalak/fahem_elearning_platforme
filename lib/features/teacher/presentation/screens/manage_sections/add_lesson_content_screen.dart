@@ -1,10 +1,9 @@
-// lib/features/teacher/presentation/screens/manage_sections/add_lesson_content_screen.dart
 import 'package:fahem/core/constants/colors.dart';
 import 'package:flutter/material.dart';
 
 class AddLessonContentScreen extends StatefulWidget {
   final String lessonName;
-  final String contentType; // 'video' لإضافة فيديو، أو 'text' لإضافة الملخص النصي
+  final String contentType; 
 
   const AddLessonContentScreen({
     super.key,
@@ -19,13 +18,12 @@ class AddLessonContentScreen extends StatefulWidget {
 class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
-  late TextEditingController _contentController; // سيحمل الرابط للفيديو أو النص للملخص
+  late TextEditingController _contentController; 
 
   @override
   void initState() {
     super.initState();
     _titleController = TextEditingController();
-    // إدخال بيانات افتراضية حية بناءً على النوع لتسهيل التجربة أثناء المناقشة
     _contentController = TextEditingController(
       text: widget.contentType == 'video' 
           ? 'https://www.youtube.com/watch?v=fahem_math_1' 
@@ -48,7 +46,7 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
           backgroundColor: AppColors.primary,
         ),
       );
-      Navigator.pop(context, _contentController.text.trim()); // العودة ممرراً البيانات المحدثة
+      Navigator.pop(context, _contentController.text.trim()); 
     }
   }
 
@@ -59,12 +57,11 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.scaffoldBackground,
-      resizeToAvoidBottomInset: true, // تكتيك حماية الواجهة من الـ Overflow عند ظهور الكيبورد
+      resizeToAvoidBottomInset: true, 
       body: Directionality(
         textDirection: TextDirection.rtl,
         child: Stack(
           children: [
-            // ==================== 1. البانر الفيروزي العلوي الموحد ====================
             Positioned(
               top: 0, left: 0, right: 0, height: headerHeight,
               child: Container(
@@ -113,7 +110,6 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
               ),
             ),
 
-            // ==================== 2. استمارة الإدخال الذكية والمحمية بالتمرير ====================
             Positioned.fill(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
@@ -123,7 +119,6 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // حقل عنوان المحتوى الثابت
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                         child: Text('العنوان الرئيسي للمحتوى:', style: TextStyle(fontFamily: 'Cairo', fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
@@ -144,7 +139,6 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
                       
                       const SizedBox(height: 20),
 
-                      // 💎 التغيير الديناميكي للحقول بناءً على الـ Content Type 💎
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
                         child: Text(
@@ -155,10 +149,10 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
                       
                       TextFormField(
                         controller: _contentController,
-                        maxLines: isVideo ? 1 : 8, // سطر واحد للرابط، و 8 أسطر مريحة لكتابة المذكرة النصية
+                        maxLines: isVideo ? 1 : 8, 
                         keyboardType: isVideo ? TextInputType.url : TextInputType.multiline,
                         style: TextStyle(
-                          fontFamily: isVideo ? 'Montserrat' : 'Cairo', // Montserrat للأرقام والروابط الإنجليزية
+                          fontFamily: isVideo ? 'Montserrat' : 'Cairo',
                           fontSize: 13.5, 
                           height: 1.5, 
                           color: AppColors.textMain,
@@ -175,7 +169,6 @@ class _AddLessonContentScreenState extends State<AddLessonContentScreen> {
 
                       const SizedBox(height: 35),
 
-                      // ==================== 3. زر الحفظ والاعتماد النهائي الفخم ====================
                       SizedBox(
                         width: double.infinity,
                         height: 50,

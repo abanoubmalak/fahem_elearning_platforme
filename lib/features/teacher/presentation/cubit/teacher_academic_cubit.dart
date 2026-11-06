@@ -1,4 +1,3 @@
-// lib/features/teacher/presentation/cubit/teacher_academic_cubit.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -23,7 +22,6 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   StreamSubscription? _academicSubscription;
 
-  // دالة مساعدة لتوليد الـ ID الرسمي للمستند سحابياً
   String _resolveSubjectDocId(String subjectId, String stageName, String term) {
     if (subjectId.contains('_')) return subjectId; 
 
@@ -37,7 +35,6 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
     return '${subjectId}_${stageCode}_${termCode}';
   }
 
-  // مراقبة وحدات المنهج ودروسه حياً من السيرفر
   void listenToSyllabus({required String subjectId, String stageName = 'الصف الأول الإعدادي', required String term}) {
     emit(AcademicLoading());
     _academicSubscription?.cancel();
@@ -60,7 +57,6 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
     });
   }
 
-  // دالة مساعدة عامة لتحديث مصفوفة الوحدات بالكامل
   Future<void> _updateSyllabusInFirebase(String subjectId, String stageName, String term, List<dynamic> updatedUnits) async {
     final String docId = _resolveSubjectDocId(subjectId, stageName, term);
     await _firestore
@@ -69,7 +65,6 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
         .set({'units': updatedUnits}, SetOptions(merge: true));
   }
 
-  // إضافة وحدة دراسية جديدة للمنهج
   Future<void> addUnit({
     required String subjectId,
     String stageName = 'الصف الأول الإعدادي',
@@ -89,7 +84,6 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
     }
   }
 
-  // إضافة درس جديد للمنهج مع تهيئة حقل الـ quiz
   Future<void> addLesson({
     required String subjectId,
     String stageName = 'الصف الأول الإعدادي',
@@ -113,7 +107,7 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
             'title': lessonName,
             'videoUrl': '',
             'summaries': [],
-            'quiz': [], // 💎 تم التحديث هنا لتهيئة حقل الاختبار بالاسم الصحيح
+            'quiz': [], 
             'isCompleted': false,
           });
           return {...unit, 'lessons': lessons};
@@ -127,7 +121,6 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
     }
   }
 
-  // تحديث محتويات الدرس (الفيديو، الملخص، أو الكويز) سحابياً
   Future<void> updateLessonContent({
     required String subjectId,
     String stageName = 'الصف الأول الإعدادي',
@@ -156,7 +149,7 @@ class TeacherAcademicCubit extends Cubit<TeacherAcademicState> {
               } else if (contentType == 'summary') {
                 return {...lesson, 'summaries': contentData}; 
               } else if (contentType == 'quiz') {
-                return {...lesson, 'quiz': contentData}; // 💎 تم التحديث لتخزين مصفوفة الأسئلة داخل الحقل quiz مباشرة
+                return {...lesson, 'quiz': contentData}; 
               }
             }
             return lesson;
