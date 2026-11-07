@@ -52,17 +52,12 @@
 
 ### System Context Diagram
 
-                 +---------------------------------------+
-                 |    🎓 FAHEM Educational Platform     |
-                 +-------------------+-------------------+
-                                     |
-     +-------------------------------+-------------------------------+
-     |                               |                               |
+
+🎓 FAHEM Educational Platform 
 
 
-+------+------+                 +------+------+                 +------+------+
-| 👨‍🎓 Student  |                 |  👪 Parent  |                 | 👨‍🏫 Teacher  |
-+-------------+                 +-------------+                 +-------------+
+👨‍🎓 Student            👪 Parent           👨‍🏫 Teacher  
+
 
 
 ### Firestore Database Schema (ERD Summary)
