@@ -5,9 +5,9 @@
 [![Dart](https://img.shields.io/badge/Language-Dart-0175C2?logo=dart)](https://dart.dev/)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-**FAHEM** is an integrated cross-platform digital learning ecosystem engineered to revolutionize Egyptian curriculum education. Designed to bridge the gap between **Students**, **Teachers**, and **Parents**, FAHEM provides role-based interactive mobile interfaces, real-time progress analytics, video lecture streaming, auto-graded assessments, and secure subscription management[cite: 18, 19, 24].
+**FAHEM** is an integrated cross-platform digital learning ecosystem engineered to revolutionize Egyptian curriculum education[cite: 24]. Designed to bridge the gap between **Students**, **Teachers**, and **Parents**, FAHEM provides role-based interactive mobile interfaces, real-time progress analytics, video lecture streaming, auto-graded assessments, and secure subscription management[cite: 18, 19, 24].
 
----
+
 
 ## 🌟 Key Features
 
@@ -39,10 +39,10 @@
 
 ## 🛠️ Tech Stack & Infrastructure
 
-* **Frontend:** Flutter SDK (Cross-platform for Android & iOS)
+* **Frontend:** Flutter SDK (Cross-platform for Android & iOS)[cite: 24]
 * **State Management:** BLoC / Cubit Pattern
 * **Backend Services:** Firebase Authentication, Cloud Firestore[cite: 20, 24]
-* **Media & Video Hosting:** Cloudinary Video API Integration
+* **Media & Video Hosting:** Cloudinary Video API Integration[cite: 24]
 * **Security & OTP:** EmailJS Integration for OTP Verification[cite: 20, 24]
 * **Software Estimation:** 206 Function Points (~11.3K LOC)[cite: 24]
 
@@ -51,3 +51,88 @@
 ## 📐 System Architecture & ERD Schema
 
 ### System Context Diagram
+
+                 +---------------------------------------+
+                 |    🎓 FAHEM Educational Platform     |
+                 +-------------------+-------------------+
+                                     |
+     +-------------------------------+-------------------------------+
+     |                               |                               |
+
+
++------+------+                 +------+------+                 +------+------+
+| 👨‍🎓 Student  |                 |  👪 Parent  |                 | 👨‍🏫 Teacher  |
++-------------+                 +-------------+                 +-------------+
+
+
+### Firestore Database Schema (ERD Summary)
+* **`USERS`**: Base authentication documents (`uid`, `role`, `isActive`, `otp_code`)[cite: 20].
+* **`STUDENTS`**: Academic profile (`stage`, `term`, `linkCode`, `unlockedPackages`)[cite: 20].
+* **`PARENTS`**: Family linking array (`linkedStudents`)[cite: 20].
+* **`TEACHERS`**: Financials & subject assignments (`availableBalance`, `averageScore`)[cite: 20].
+* **`SUBJECTS_CONTENT` -> `UNIT` -> `LESSON`**: Structured course data[cite: 20].
+* **`STUDENT_PROGRESS`**: Real-time video & quiz metrics tracking[cite: 20].
+* **`TRANSACTIONS`**: Revenue-split logs (`totalAmountPaid`, `platformProfit`, `teachersProfit`)[cite: 20].
+
+
+## 🚀 Getting Started
+
+### Prerequisites
+* Flutter SDK (`>=3.0.0`)
+* Dart SDK (`>=3.0.0`)
+* Android Studio / VS Code with Flutter extensions
+* Active Firebase project configuration
+
+### Installation
+
+1. **Clone the repository:**
+
+   git clone [https://github.com/abanoubmalak/fahem_elearning_platforme.git](https://github.com/abanoubmalak/fahem_elearning_platforme.git)
+   cd fahem_elearning_platforme
+
+
+2. **Install dependencies:**
+flutter pub get
+
+
+
+3. **Configure Firebase:**
+Add your `google-services.json` for Android and `GoogleService-Info.plist` for iOS into their respective directories.
+4. **Run the app:**
+
+flutter run
+
+
+
+## 📈 Economic Feasibility & Impact
+
+* **Return on Investment (ROI):** ≈ 217% over 3 years.
+
+
+* **Net Present Value (NPV):** ~880,631 EGP positive NPV.
+
+
+* **Payback Period:** Reached within 1.2 years.
+
+
+
+
+
+## 👨‍💻 Developer & Team
+
+* **Abanoub Malak Ramzy Hakim** — *Lead Mobile Application Developer (Flutter & Architecture)*
+
+
+* Developed as a Bachelor's Graduation Project at **Minia University - Faculty of Science (IT Department)**.
+
+
+
+
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
+
+```
+
+```
