@@ -120,10 +120,3 @@ flutter run
 
 * Developed as a Bachelor's Graduation Project at **Minia University - Faculty of Science (IT Department)**.
 
-
-
-
-
-## 📄 License
-
-This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
